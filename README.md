@@ -61,5 +61,5 @@ plt.show()
 ```
 
 ## TODO:
-- Add class exports to ROSS message types
+- Add class exports to ROS message types
 - Show quaternions in `test.py`
