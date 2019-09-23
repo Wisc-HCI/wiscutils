@@ -1,5 +1,5 @@
-# Interpolation
-Basic Library for Interpolation
+# Wisc Utils
+Basic Utility Library for Interpolation, Conversion, and More!
 
 ## Requirements
 - `pip install numpy pyquaternion scipy`
@@ -11,7 +11,7 @@ Basic Library for Interpolation
 The following computes a simple trajectory based on waypoints and graphs them:
 
 ```python
-from interpolation import Position, Pose, Quaternion, Waypoint, Trajectory
+from wiscutils.interpolation import Position, Pose, Quaternion, Waypoint, Trajectory
 import matplotlib.pyplot as plt
 from mpl_toolkits import mplot3d
 
@@ -37,7 +37,7 @@ plt.show()
 The following computes a trajectory based on waypoints such that it wraps back around to the start smoothly:
 
 ```python
-from interpolation import Position, Pose, Quaternion, Waypoint, Trajectory
+from wiscutils.interpolation import Position, Pose, Quaternion, Waypoint, Trajectory
 import matplotlib.pyplot as plt
 from mpl_toolkits import mplot3d
 
