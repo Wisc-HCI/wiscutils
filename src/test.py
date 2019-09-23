@@ -1,4 +1,4 @@
-from interpolation import Position, Pose, Quaternion, Waypoint, Trajectory
+from wiscutils.interpolation import Position, Pose, Quaternion, Waypoint, Trajectory
 import matplotlib.pyplot as plt
 from mpl_toolkits import mplot3d
 
