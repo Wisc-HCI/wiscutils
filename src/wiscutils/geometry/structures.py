@@ -2,6 +2,10 @@ import numpy as np
 from scipy import interpolate
 from pyquaternion import Quaternion
 from util import pairwise
+try:
+    from relaxed_ik.msg import EEPoseGoals
+except:
+    pass
 
 class Position(object):
     def __init__(self,x,y,z):
@@ -13,6 +17,10 @@ class Pose(object):
     def __init__(self,position,quaternion):
         self.position = position
         self.quaternion = quaternion
+
+    @property
+    def ee_pose_goal(self):
+        pass
 
 class Waypoint(object):
     def __init__(self, time, pose):
@@ -42,6 +50,9 @@ class Trajectory(object):
     @property
     def q(self):
         return [wp.pose.quaternion for wp in self.wps]
+
+    def __getitem__(self,index):
+        return self.wps[index]
 
     def interpolate(self, resolution, circuit=False):
         """interpolate.
