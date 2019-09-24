@@ -1,11 +1,17 @@
 import numpy as np
 from scipy import interpolate
-from pyquaternion import Quaternion
+from pyquaternion import Quaternion as pyQuaternion
 from util import pairwise
+from geometry_msgs.msg import Vector3 as rosVector3
+from geometry_msgs.msg import Quaternion as rosQuaternion
+from geometry_msgs.msg import Pose as rosPose
+from wiscutils.msg import EulerPose
+
 try:
     from relaxed_ik.msg import EEPoseGoals
 except:
-    pass
+    from wiscutils.msg import EEPoseGoals
+
 
 class Position(object):
     def __init__(self,x,y,z):
@@ -13,14 +19,67 @@ class Position(object):
         self.y = y
         self.z = z
 
+    @property
+    def ros_vector3(self):
+        return rosVector3(x=self.x,y=self.y,z=self.z)
+
+    @property
+    def array(self):
+        return np.array([self.x,self.y,self.z])
+
+    @property
+    def dict(self):
+        return {"x":self.x,"y":self.y,"z":self.z}
+
+    @classmethod
+    def from_ros_vector3(cls,vector3):
+        return Position(x=vector3.x,y=vector3.y,z=vector3.z)
+
+class Quaternion(pyQuaternion):
+
+    @property
+    def ros_quaternion(self):
+        return rosQuaternion(x=self.x,y=self.y,z=self.z,w=self.w)
+
+    @property
+    def ros_euler(self):
+        (r,p,y) = tf.transformations.euler_from_quaternion(self.ros_quaternion)
+        return rosVector3(x=r,y=p,z=y)
+
+    @classmethod
+    def from_py_quaternion(self,pyquaternion):
+        return Quaternion(x=pyquaterion.x,y=pyquaternion.y,z=pyquaternion.z,w=pyquaternion.w)
+
+    @classmethod
+    def from_ros_quaternion(self,quaternion):
+        return Quaternion(x=quaterion.x,y=quaternion.y,z=quaternion.z,w=quaternion.w)
+
+    @classmethod
+    def from_ros_euler(self,euler,form='sxyz'):
+        tf_quat = tf.transformations.quaternion_from_euler(euler.x,euler.y,euler.z,form)
+        return Quaternion.from_ros_quaternion(tf_quat)
+
 class Pose(object):
     def __init__(self,position,quaternion):
         self.position = position
         self.quaternion = quaternion
 
     @property
-    def ee_pose_goal(self):
+    def ros_pose(self):
+        return rosPose(position=self.position.ros_vector3,orientation=self.quaternion.ros_quaternion)
+
+    @property
+    def ros_eulerpose(self):
+        return EulerPose(position=self.position.ros_vector3,orientation=self.orientation.ros_euler)
+
+    @classmethod
+    def from_ros_eulerpose(self,eulerpose):
         pass
+
+    @classmethod
+    def from_ros_pose(self,pose):
+        return Pose(position=Position.from_ros_vector3(pose.position),orientation=Quaternion.from_ros_quaternion(pose.orientation))
+
 
 class Waypoint(object):
     def __init__(self, time, pose):
