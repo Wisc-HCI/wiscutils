@@ -6,6 +6,7 @@ from geometry_msgs.msg import Vector3 as rosVector3
 from geometry_msgs.msg import Quaternion as rosQuaternion
 from geometry_msgs.msg import Pose as rosPose
 from wiscutils.msg import EulerPose
+from wiscutils.convenience import pairwise
 
 try:
     from relaxed_ik.msg import EEPoseGoals
