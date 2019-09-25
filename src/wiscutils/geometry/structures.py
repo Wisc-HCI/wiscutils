@@ -48,7 +48,7 @@ class Quaternion(pyQuaternion):
 
     @classmethod
     def from_py_quaternion(self,pyquaternion):
-        return Quaternion(x=pyquaterion.x,y=pyquaternion.y,z=pyquaternion.z,w=pyquaternion.w)
+        return Quaternion(x=pyquaternion.x,y=pyquaternion.y,z=pyquaternion.z,w=pyquaternion.w)
 
     @classmethod
     def from_ros_quaternion(self,quaternion):
@@ -153,14 +153,44 @@ class Trajectory(object):
         y_result = y(indices)
         z_result = z(indices)
 
-        quat_results = [self.wps[0]]
+        quat_results = [Quaternion.from_py_quaternion(self.wps[0].pose.quaternion)]
         for wp1, wp2 in pairwise(self.wps):
             n = int((wp2.time - wp1.time)/resolution)-1
-            quat_results.extend(Quaternion.intermediates(wp1.pose.quaternion,wp2.pose.quaternion,n=n,include_endpoints=False))
-            quat_results.append(wp2.pose.quaternion)
+            quat_results.extend([Quaternion.from_py_quaternion(q) for q in Quaternion.intermediates(wp1.pose.quaternion,wp2.pose.quaternion,n=n,include_endpoints=False)])
+            quat_results.append(Quaternion.from_py_quaternion(wp2.pose.quaternion))
 
         wps = []
         for i in range(0,len(quat_results)):
             wps.append(Waypoint(indices[i],Pose(Position(x_result[i],y_result[i],z_result[i]),
                                                 quat_results[i])))
         return Trajectory(wps)
+
+class MultiArmTrajectory(object):
+    def __init__(self,arm_trajectories={},arm_order=None):
+        self.arm_trajectories = arm_trajectories
+        if arm_order == None:
+            self.arm_order = list(self.arm_trajectories.keys())
+        else:
+            self.arm_order = arm_order
+
+    def interpolate(self, resolution, circuit=False):
+        trajectories = {}
+        for arm,goal in self.arm_trajectories.iteritems():
+            trajectories[arm] = goal.interpolate(resolution,circuit)
+        return MultiArmTrajectory(trajectories,self.arm_order)
+
+    @property
+    def ros_eeposegoals(self):
+        eeposegoals = []
+        seq = 0
+        for posegoal in self:
+            eepg = EEPoseGoals()
+            eepg.header.seq = seq
+            for arm in self.arm_order:
+                eepg.ee_poses.append(posegoal[arm].pose.ros_pose)
+            eeposegoals.append(eepg)
+            seq += 1
+        return eeposegoals
+
+    def __getitem__(self,index):
+        return {arm:self.arm_trajectories[arm][index] for arm in self.arm_order}
