@@ -5,13 +5,8 @@ from util import pairwise
 from geometry_msgs.msg import Vector3 as rosVector3
 from geometry_msgs.msg import Quaternion as rosQuaternion
 from geometry_msgs.msg import Pose as rosPose
-from wiscutils.msg import EulerPose
+from wiscutils.msg import EulerPose, EEPoseGoals
 from wiscutils.convenience import pairwise
-
-try:
-    from relaxed_ik.msg import EEPoseGoals
-except:
-    from wiscutils.msg import EEPoseGoals
 
 
 class Position(object):
@@ -183,14 +178,11 @@ class MultiArmTrajectory(object):
     @property
     def ros_eeposegoals(self):
         eeposegoals = []
-        seq = 0
         for posegoal in self:
             eepg = EEPoseGoals()
-            eepg.header.seq = seq
             for arm in self.arm_order:
                 eepg.ee_poses.append(posegoal[arm].pose.ros_pose)
             eeposegoals.append(eepg)
-            seq += 1
         return eeposegoals
 
     def __getitem__(self,index):

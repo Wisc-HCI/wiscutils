@@ -1,3 +1,4 @@
-__all__ = ["pairwise"]
+__all__ = ["pairwise","ProgressBar"]
 
 from iteration import *
+from progress import *
