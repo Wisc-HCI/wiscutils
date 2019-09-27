@@ -8,7 +8,6 @@ from geometry_msgs.msg import Pose as rosPose
 from wiscutils.msg import EulerPose, EEPoseGoals
 from wiscutils.convenience import pairwise
 
-
 class Position(object):
     def __init__(self,x,y,z):
         self.x = x
@@ -78,13 +77,17 @@ class Pose(object):
 
 
 class Waypoint(object):
-    def __init__(self, time, pose):
+    def __init__(self, time, pose, annotation={}):
         self.time = time
         self.pose = pose
+        self.annotation = annotation
 
 class Trajectory(object):
     def __init__(self, waypoints):
         self.wps = waypoints
+
+    def annotation(self,field):
+        return [wp.annotation[field] for wp in self.wps]
 
     @property
     def t(self):
@@ -109,7 +112,7 @@ class Trajectory(object):
     def __getitem__(self,index):
         return self.wps[index]
 
-    def interpolate(self, resolution, circuit=False):
+    def interpolate(self, resolution, circuit=False, annotations=[], kind='quadratic'):
         """interpolate.
 
         Parameters
@@ -127,27 +130,37 @@ class Trajectory(object):
         """
         if len(self.wps) == 0:
             return self
+        a = {}
         if not circuit:
-            x = interpolate.interp1d(self.t,self.x,kind='cubic')
-            y = interpolate.interp1d(self.t,self.y,kind='cubic')
-            z = interpolate.interp1d(self.t,self.z,kind='cubic')
-
+            x = interpolate.interp1d(self.t,self.x,kind=kind)
+            y = interpolate.interp1d(self.t,self.y,kind=kind)
+            z = interpolate.interp1d(self.t,self.z,kind=kind)
+            for annotation in annotations:
+                a[annotation] = interpolate.interp1d(self.t,self.annotation(annotation),kind=kind)
         else:
             original = {"t":self.t,"x":self.x,"y":self.y,"z":self.z}
-            t = [original["t"][-2]-original["t"][-1]]+self.t+[original["t"][1]+original["t"][-1]]
+            for annotation in annotations:
+                original[annotation] = self.annotation(annotation)
+            tp = [original["t"][-2]-original["t"][-1]]+self.t+[original["t"][1]+original["t"][-1]]
             xp = [original["x"][-2]-original["x"][-1]]+self.x+[original["x"][1]+original["x"][-1]]
             yp = [original["y"][-2]-original["y"][-1]]+self.y+[original["y"][1]+original["y"][-1]]
             zp = [original["z"][-2]-original["z"][-1]]+self.z+[original["z"][1]+original["z"][-1]]
+            aps = {}
+            for annotation in annotations:
+                aps[annotation] = [original[annotation][-2]-original[annotation][-1]]+self.annotation(annotation)+[original[annotation][1]+original[annotation][-1]]
 
-            x = interpolate.interp1d(t,xp,kind='cubic')
-            y = interpolate.interp1d(t,yp,kind='cubic')
-            z = interpolate.interp1d(t,zp,kind='cubic')
+            x = interpolate.interp1d(tp,xp,kind=kind)
+            y = interpolate.interp1d(tp,yp,kind=kind)
+            z = interpolate.interp1d(tp,zp,kind=kind)
+            for annotation in annotations:
+                a[annotation] = interpolate.interp1d(tp,aps[annotation],kind=kind)
 
         total_time = max(self.t)
         indices = np.arange(0,total_time+resolution,resolution)
         x_result = x(indices)
         y_result = y(indices)
         z_result = z(indices)
+        annot_result = {annotation:a[annotation](indices) for annotation in annotations}
 
         quat_results = [Quaternion.from_py_quaternion(self.wps[0].pose.quaternion)]
         for wp1, wp2 in pairwise(self.wps):
@@ -158,7 +171,8 @@ class Trajectory(object):
         wps = []
         for i in range(0,len(quat_results)):
             wps.append(Waypoint(indices[i],Pose(Position(x_result[i],y_result[i],z_result[i]),
-                                                quat_results[i])))
+                                                quat_results[i]),
+                                annotation={annot:annot_result[annot][i] for annot in annotations}))
         return Trajectory(wps)
 
 class MultiArmTrajectory(object):
@@ -169,10 +183,14 @@ class MultiArmTrajectory(object):
         else:
             self.arm_order = arm_order
 
-    def interpolate(self, resolution, circuit=False):
+    def interpolate(self, resolution, circuit=False, annotations={}):
         trajectories = {}
         for arm,goal in self.arm_trajectories.iteritems():
-            trajectories[arm] = goal.interpolate(resolution,circuit)
+            annot = []
+            if arm in annotations:
+                annot = annotations[arm]
+            trajectories[arm] = goal.interpolate(resolution,circuit,annot)
+
         return MultiArmTrajectory(trajectories,self.arm_order)
 
     @property
