@@ -112,7 +112,7 @@ class Trajectory(object):
     def __getitem__(self,index):
         return self.wps[index]
 
-    def interpolate(self, resolution, circuit=False, annotations=[], kind='quadratic'):
+    def interpolate(self, resolution, circuit=False, annotations=[], kind='cubic'):
         """interpolate.
 
         Parameters
