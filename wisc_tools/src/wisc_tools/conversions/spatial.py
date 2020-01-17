@@ -1,10 +1,10 @@
 import tf
 
-from wiscutils.msg import EulerPose, EEPoseGoals
+from wisc_msgs.msg import EulerPose, EEPoseGoals
 import geometry_msgs.msg.Vector3 as rosVector3
 import geometry_msgs.msg.Quaternion as rosQuaternion
 import pyquaternion
-from wiscutils.geometry import *
+from wisc_tools.geometry import *
 
 #===============================================================================
 #       Position Message Conversion
