@@ -1,7 +1,7 @@
 import numpy as np
 from scipy import interpolate
 from pyquaternion import Quaternion as pyQuaternion
-from util import pairwise
+from wiscutils.convenience import pairwise
 from geometry_msgs.msg import Vector3 as rosVector3
 from geometry_msgs.msg import Quaternion as rosQuaternion
 from geometry_msgs.msg import Pose as rosPose
