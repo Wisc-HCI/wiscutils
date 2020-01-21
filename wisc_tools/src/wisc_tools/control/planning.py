@@ -83,7 +83,7 @@ class EventController(Sequence):
     '''
     def __init__(self):
         self.events = []
-        self.pose_trajectories = {}
+        self.arm_trajectories = {}
         self.annotation_trajectories = {}
         self.mode_trajectories = {}
 
@@ -106,13 +106,13 @@ class EventController(Sequence):
     def get_event_at_time(self,time):
         return next((e for e in self.events if e.time == time), None)
 
-    def get_pose_trajectory(self,pose,current_time):
+    def get_arm_trajectory(self,arm,current_time):
         try:
-            current = [self.pose_trajectories[pose][current_time]]
+            current = [self.arm_trajectories[arm][current_time]]
         except:
             current = []
-        poses = PoseTrajectory(current+[{'time':event.time,'pose':event.get_pose(pose)} for event in self.events if event.has_pose(pose)])
-        self.pose_trajectories[pose] = poses
+        poses = PoseTrajectory(current+[{'time':event.time,'pose':event.get_pose(arm)} for event in self.events if event.has_pose(arm)])
+        self.arm_trajectories[arm] = poses
         return poses
 
     def get_annotation_trajectory(self,annotation,current_time):
@@ -133,8 +133,8 @@ class EventController(Sequence):
         self.mode_trajectories[mode] = modes
         return modes
 
-    def delete_all_poses_after(self,time,pose):
-        [event.delete_pose(pose) for event in self.events if event >= time and event.has_pose(pose)]
+    def delete_all_poses_after(self,time,arm):
+        [event.delete_pose(arm) for event in self.events if event >= time and event.has_pose(arm)]
         self.events = [event for event in self.events if not event.empty]
 
     def delete_all_annotations_after(self,time,annotation):
@@ -145,13 +145,13 @@ class EventController(Sequence):
         [event.delete_mode(mode) for event in self.events if event >= time and event.has_mode(mode)]
         self.events = [event for event in self.events if not event.empty]
 
-    def add_pose_at_time(self,time,pose,value):
+    def add_pose_at_time(self,time,arm,value):
         if time in self.times:
             event = self.get_event_at_time(time)
-            event.add_pose(pose,value)
+            event.add_pose(arm,value)
         else:
             event = Event(time)
-            event.add_pose(pose,value)
+            event.add_pose(arm,value)
             self.events.append(event)
             self.events.sort()
 
