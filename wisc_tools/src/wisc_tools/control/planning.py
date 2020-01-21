@@ -83,6 +83,9 @@ class EventController(Sequence):
     '''
     def __init__(self):
         self.events = []
+        self.pose_trajectories = {}
+        self.annotation_trajectories = {}
+        self.mode_trajectories = {}
 
     def __len__(self):
         t = self.times
@@ -103,14 +106,32 @@ class EventController(Sequence):
     def get_event_at_time(self,time):
         return next((e for e in self.events if e.time == time), None)
 
-    def get_pose_trajectory(self,pose,current_time,current_pose):
-        return PoseTrajectory([{'time':current_time,'pose':curent_pose}]+[{'time':event.time,'pose':event.get_pose(pose)} for event in self.events if event.has_pose(pose)])
+    def get_pose_trajectory(self,pose,current_time):
+        try:
+            current = [self.pose_trajectories[pose][current_time]]
+        except:
+            current = []
+        poses = PoseTrajectory(current+[{'time':event.time,'pose':event.get_pose(pose)} for event in self.events if event.has_pose(pose)])
+        self.pose_trajectories[pose] = poses
+        return poses
 
-    def get_annotation_trajectory(self,annotation,current_time,current_annotation):
-        return AnnotationTrajectory([{'time':current_time,'annotation':curent_annotation}]+[{'time':event.time,'annotation':event.get_annotation(annotation)} for event in self.events if event.has_annotation(annotation)])
+    def get_annotation_trajectory(self,annotation,current_time):
+        try:
+            current = [self.annotation_trajectories[annotation][current_time]]
+        except:
+            current = []
+        annotations = AnnotationTrajectory(current+[{'time':event.time,'annotation':event.get_annotation(annotation)} for event in self.events if event.has_annotation(annotation)])
+        self.annotation_trajectories[annotation] = annotations
+        return annotations
 
-    def get_all_of_mode(self,mode,current_time,current_mode):
-        return ModeTrajectory([{'time':current_time,'mode':curent_mode}]+[{'time':event.time,'mode':event.get_mode(mode)} for event in self.events if event.has_mode(mode)])
+    def get_mode_trajectory(self,mode,current_time):
+        try:
+            current = [self.mode_trajectories[mode][current_time]]
+        except:
+            current = []
+        modes = ModeTrajectory([{'time':current_time,'mode':curent_mode}]+[{'time':event.time,'mode':event.get_mode(mode)} for event in self.events if event.has_mode(mode)])
+        self.mode_trajectories[mode] = modes
+        return modes
 
     def delete_all_poses_after(self,time,pose):
         [event.delete_pose(pose) for event in self.events if event >= time and event.has_pose(pose)]
