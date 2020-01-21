@@ -6,7 +6,7 @@ class StateController(object):
     Generic StateController Object.
     Handles updates to goals, modes, and actions
     '''
-    def __init__(self, rosnode, arms=[], joints=[], modes={}, actions={}, poses={}, annotatons={}):
+    def __init__(self, rosnode, arms=[], joints=[], modes={}, actions={}, poses={}, annotations={}):
         self.rosnode = rosnode
         self.new(arms, joints, modes, actions, poses, annotations)
 
