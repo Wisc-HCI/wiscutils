@@ -1,3 +1,3 @@
-__all__ = ["Position","Pose","Quaternion","Waypoint","Trajectory","MultiArmTrajectory"]
+__all__ = ["Position","Pose","Quaternion","ModeTrajectory","AnnotationTrajectory",,"PoseTrajectory"]
 
 from .structures import *

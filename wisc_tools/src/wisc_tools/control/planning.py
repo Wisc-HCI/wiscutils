@@ -1,4 +1,4 @@
-from wisc_tools.geometry import Position, Quaternion, Pose, Waypoint, Trajectory, MultiArmTrajectory
+from wisc_tools.geometry import Position, Quaternion, Pose, ModeTrajectory, PoseTrajectory, AnnotationTrajectory
 from collections.abc import Sequence
 
 class Event(object):
@@ -17,6 +17,24 @@ class Event(object):
             return self.time < other.time
         else:
             return self.time < other
+
+    def __le__(self,other):
+        if hasattr(other,'time'):
+            return self.time <= other.time
+        else:
+            return self.time <= other
+
+    def __gt__(self,other):
+        if hasattr(other,'time'):
+            return self.time > other.time
+        else:
+            return self.time > other
+
+    def __ge__(self,other):
+        if hasattr(other,'time'):
+            return self.time >= other.time
+        else:
+            return self.time >= other
 
     @property
     def empty(self):
@@ -67,7 +85,13 @@ class EventController(Sequence):
         self.events = []
 
     def __len__(self):
-        return len(self.events)
+        t = self.times
+        minimum = min(t)
+        maximum = max(t)
+        return max-min
+
+    def __iter__(self):
+        return self.events.__iter__()
 
     def __getitem__(self,time):
         return self.get_event_at_time(time)
@@ -79,14 +103,14 @@ class EventController(Sequence):
     def get_event_at_time(self,time):
         return next((e for e in self.events if e.time == time), None)
 
-    def get_all_of_pose(self,pose):
-        return [{'time':event.time,'pose':event.get_pose(pose)} for event in self.events if event.has_pose(pose)]
+    def get_pose_trajectory(self,pose,current_time,current_pose):
+        return PoseTrajectory([{'time':current_time,'pose':curent_pose}]+[{'time':event.time,'pose':event.get_pose(pose)} for event in self.events if event.has_pose(pose)])
 
-    def get_all_of_annotation(self,annotation):
-        return [{'time':event.time,'annotation':event.get_annotation(annotation)} for event in self.events if event.has_annotation(annotation)]
+    def get_annotation_trajectory(self,annotation,current_time,current_annotation):
+        return AnnotationTrajectory([{'time':current_time,'annotation':curent_annotation}]+[{'time':event.time,'annotation':event.get_annotation(annotation)} for event in self.events if event.has_annotation(annotation)])
 
-    def get_all_of_mode(self,mode):
-        return [{'time':event.time,'mode':event.get_mode(mode)} for event in self.events if event.has_mode(mode)]
+    def get_all_of_mode(self,mode,current_time,current_mode):
+        return ModeTrajectory([{'time':current_time,'mode':curent_mode}]+[{'time':event.time,'mode':event.get_mode(mode)} for event in self.events if event.has_mode(mode)])
 
     def delete_all_poses_after(self,time,pose):
         [event.delete_pose(pose) for event in self.events if event >= time and event.has_pose(pose)]
@@ -143,3 +167,5 @@ if __name__ == '__main__':
     print(len(controller))
     print(controller[1].poses)
     print(controller.get_all_of_mode('test_mode'))
+    controller.timestep_to(3)
+    print(len(controller))
