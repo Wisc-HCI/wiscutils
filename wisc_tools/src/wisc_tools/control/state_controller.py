@@ -15,7 +15,8 @@ class StateController(object):
         now = self.now
         state = {'arms':{},
                  'annotations':{},
-                 'modes':{}
+                 'modes':{},
+                 'actions':[]
                 }
         for arm in self.poses.keys():
             state['arms'][arm] = self.arm_trajectories[arm][self.now]
@@ -75,7 +76,7 @@ class StateController(object):
         self.event_controller.timestep_to(self.now)
 
     def get_initial(self):
-        initial = {'actions':[],'modes':{},'poses':{}}
+        initial = {'actions':[],'modes':{},'arms':{},'annotations':{}}
         for arm in self.arms:
             defaults = [pose for pose in self.poses[arm].keys() if self.poses[arm][pose]['default']]
             if len(defaults) >= 1:
@@ -88,7 +89,7 @@ class StateController(object):
 
     def step(self):
         self.timestep()
-        return {}
+        return self.current
 
     @staticmethod
     def time_to_pose(current_pose,goal_pose):
