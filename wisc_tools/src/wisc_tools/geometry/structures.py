@@ -8,7 +8,7 @@ from wisc_msgs.msg import Euler, EulerPose, EEPoseGoals
 from geometry_msgs.msg import Vector3 as rosVector3
 from geometry_msgs.msg import Quaternion as rosQuaternion
 from geometry_msgs.msg import Pose as rosPose
-from abc import ABC
+from abc import ABC, abstractmethod
 
 class Position(object):
     def __init__(self,x,y,z):
