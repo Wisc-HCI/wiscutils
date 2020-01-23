@@ -3,12 +3,33 @@ import math
 from scipy import interpolate
 from pyquaternion import Quaternion as pyQuaternion
 from wisc_tools.convenience import pairwise
-from wisc_tools.geometry import transformations
+from wisc_tools.conversions import transformations
 from wisc_msgs.msg import Euler, EulerPose, EEPoseGoals
 from geometry_msgs.msg import Vector3 as rosVector3
 from geometry_msgs.msg import Quaternion as rosQuaternion
 from geometry_msgs.msg import Pose as rosPose
 from abc import ABC, abstractmethod
+
+class Mode(object):
+    '''
+    Mode Class
+    Itty bitty mode object that handles override and deferred values
+    '''
+    def __init__(self, override_value=None, deferred_value=None):
+        self.deferred_value = deferred_value
+        self.override_value = override_value
+
+    @property
+    def empty(self):
+        return self.override_value == None and self.deferred_value == None
+
+    @property
+    def has_override(self):
+        return self.override_value != None
+
+    @property
+    def has_deferred(self):
+        return self.deferred_value != None
 
 class Position(object):
     def __init__(self,x,y,z):
@@ -138,18 +159,21 @@ class Trajectory(ABC):
     def __interpolate__(self):
         pass
 
-
 class ModeTrajectory(Trajectory):
 
+    def __init__(self,waypoints,fill='interpolate',kind='cubic',circuit=False,min_value=None,max_value=None):
+        self.fill = fill
+        super(ModeTrajectory,self).__init__(waypoints,kind='cubic',circuit=False,min_value=None,max_value=None)
+
     @property
-    def m(self):
+    def v(self):
         return [wp['mode'] for wp in self.wps]
 
     def __getitem__(self,time):
         if self.circuit:
             start = min(self.t)
             time = time - start % (len(self) + start)
-        return self.__filter__(self.fn(time))
+        return self.__filter__(self.vfn(time))
 
     def __filter__(self,value):
         if self.min_value != None and self.min_value > value:
@@ -162,14 +186,13 @@ class ModeTrajectory(Trajectory):
     def __interpolate__(self):
         assert len(self.wps) > 0
         t = self.t
-        m = self.m
+        v = self.v
         if not self.circuit:
-            self.fn = interpolate.interp1d(t,self.m,kind=self.kind,fill_value='extrapolate')
+            self.vfn = interpolate.interp1d(t,v,kind=self.kind,fill_value='extrapolate')
         else:
             tp = [t[-2]-t[-1]]+t+[t[1]+t[-1]]
-            mp = [m[-2]-m[-1]]+m+[m[1]+m[-1]]
-
-            self.fn = interpolate.interp1d(tp,mp,kind=self.kind,fill_value='extrapolate')
+            vp = [v[-2]-v[-1]]+v+[v[1]+v[-1]]
+            self.vfn = interpolate.interp1d(tp,vp,kind=self.kind,fill_value='extrapolate')
 
 class AnnotationTrajectory(Trajectory):
 
