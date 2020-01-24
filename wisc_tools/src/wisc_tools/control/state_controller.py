@@ -1,10 +1,12 @@
-from wisc_tools.geometry import Position, Quaternion, Pose, ModeTrajectory, PoseTrajectory, AnnotationTrajectory
+from wisc_tools.structures import Mode, Position, Quaternion, Pose, ModeTrajectory, PoseTrajectory, AnnotationTrajectory
 from wisc_tools.control import EventController
+from rclpy.duration import Duration
+import math
 
 class StateController(object):
     '''
     Generic StateController Object.
-    Handles updates to goals, modes, and actions
+    Handles updates to goals, modes, annotations, and actions
     '''
 
     next_group_id = 0
@@ -14,36 +16,18 @@ class StateController(object):
         self.new(arms, joints, modes, actions, poses, annotations)
 
     @property
-    def current(self):
-        now = self.now
-        state = {'arms':{},
-                 'annotations':{},
-                 'modes':{},
-                 'actions':[]
-                }
-        for arm in self.poses.keys():
-            state['arms'][arm] = self.arm_trajectories[arm][self.now]
-        for annotation in self.annotations.keys():
-            state['annotations'] = self.annotation_trajectories[annotation][self.now]
-        for mode in self.modes.keys():
-            state['modes'] = self.mode_trajectories[mode][self.now]
-        return state
-
-    @property
     def now(self):
         return self.rosnode.get_clock().now()
 
     def new(self, arms, joints, modes, actions, poses, annotations):
-        self.event_controller = EventController()
+        self.event_controller = EventController(modes)
+        self.current = {}
         self.arms = arms
         self.joints = joints
         self.modes = modes
         self.actions = actions
         self.annotations = annotations
         self.poses = {}
-        self.arm_trajectories = {}
-        self.annotation_trajectories = {}
-        self.mode_trajectories = {}
         for arm, pose in poses.items():
             self.poses[arm] = {pose_name:{'pose':Pose.from_eulerpose_dict(pose_info),'default':pose_info['default']} for (pose_name,pose_info) in pose.items()}
 
@@ -76,10 +60,22 @@ class StateController(object):
         [print({'time': event.time, 'poses': event.poses}) for event in self.event_controller.events]
         # self.event_controller.add_pose_at_time()
 
-    def set_mode(self,mode,value,offset=None):
+    def set_mode(self,mode,value,offset=None,override=True):
         # Estimate time needed to smoothly apply that mode
-        print('Setting mode for {0} to {1}'.format(mode, value))
-        # If offset is none, calculate the time to do the event
+        current_value =  self.modes[mode]['values'][self.current['modes'][mode]['current']]
+        goal_value = self.modes[mode]['values'][value]
+        print(current_value,goal_value)
+        time_to_mode = self.time_to_mode(current_value,goal_value)
+        print(self.now)
+        mode_time = self.now+time_to_mode
+        print('Setting mode for {0} to {1} in {2}'.format(mode, value, time_to_mode))
+        if override and value == 'defer':
+            self.event_controller.set_mode_override(self.now,mode,False)
+        elif override:
+            self.event_controller.add_mode_at_time(mode_time,mode,value,True)
+            self.event_controller.set_mode_override(self.now,mode,True)
+        else:
+            self.event_controller.add_mode_at_time(mode_time,mode,value,False)
 
     def cancel_pose(self,arm):
         pass
@@ -87,26 +83,22 @@ class StateController(object):
     def cancel_annotation(self,annotation):
         pass
 
-    def cancel_mode(self,mode):
-        pass
-
-    def timestep(self):
-        self.event_controller.timestep_to(self.now)
-
     def get_initial(self):
         initial = {'actions':[],'modes':{},'arms':{},'annotations':{},'poses':{}}
         for arm in self.arms:
             defaults = [pose for pose in self.poses[arm].keys() if self.poses[arm][pose]['default']]
             if len(defaults) >= 1:
-                initial['poses'][arm] = defaults[0]
+                initial['arms'][arm] = defaults[0]
             else:
-                initial['poses'][arm] = self.poses[arm].keys()[0]
+                initial['arms'][arm] = self.poses[arm].keys()[0]
         for mode in self.modes.keys():
             initial['modes'][mode] = {'defer':self.modes[mode]['default'] == 'defer','current':self.modes[mode]['initial']}
+        self.current = initial
         return initial
 
-    def step(self):
-        self.timestep()
+    def timestep(self):
+        annotations = self.event_controller.timestep_to(self.now)
+        self.current["annotations"] = annotations
         return self.current
 
     @staticmethod
@@ -117,7 +109,7 @@ class StateController(object):
     @staticmethod
     def time_to_mode(current_mode,mode_goal):
         # Hard coded for the time being.
-        return 0
+        return Duration(seconds=math.fabs(current_mode-mode_goal)*10)
 
     @staticmethod
     def events_to_multiarm_trajectory(self,events):

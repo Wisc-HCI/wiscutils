@@ -1,5 +1,6 @@
-from wisc_tools.geometry import Position, Quaternion, Pose, ModeTrajectory, PoseTrajectory, AnnotationTrajectory
+from wisc_tools.structures import Mode, Position, Quaternion, Pose, ModeTrajectory, PoseTrajectory, AnnotationTrajectory
 from collections.abc import Sequence
+from rclpy.time import Time
 
 class Event(object):
     '''
@@ -39,40 +40,57 @@ class Event(object):
 
     @property
     def empty(self):
-        return not (len(self.poses) > 0 or len(self.annotations) > 0 or len(self.modes) > 0)
+        return not (len(self.poses) > 0 or len(self.annotations) > 0 or len([mode for mode in self.modes if not mode.empty]) > 0)
 
-    def has_pose(self,pose):
+    def has_pose(self,pose:str):
         return pose in self.poses.keys()
 
-    def get_pose(self,pose):
+    def get_pose(self,pose:str):
         return self.poses.get(pose,None)
 
+<<<<<<< HEAD
     def add_pose(self,pose,value,group_id):
         self.poses[pose] = {'value': value, 'group_id': group_id}
+=======
+    def add_pose(self,pose:str,value:Pose):
+        self.poses[pose] = value
+>>>>>>> 12aeeeaa7be6929ec5c092f5db8fcfae40b34de0
 
-    def delete_pose(self,pose):
+    def delete_pose(self,pose:str):
         del self.poses[pose]
 
-    def has_annotation(self,annotation):
+    def has_annotation(self,annotation:str):
         return annotation in self.annotations.keys()
 
-    def get_annotation(self,annotation):
+    def get_annotation(self,annotation:str):
         return self.annotations.get(annotation,None)
 
-    def add_annotation(self,annotation,value):
+    def add_annotation(self,annotation:str,value:str):
         self.annotations[annotation] = value
 
-    def delete_annotation(self,annotation):
+    def delete_annotation(self,annotation:str):
         del self.annotations[annotation]
 
-    def has_mode(self,mode):
-        return mode in self.modes.keys()
+    def has_mode(self,mode:str,mode_override:bool):
+        if mode_override:
+            return mode in self.modes.keys() and self.modes[mode].has_override
+        else:
+            return mode in self.modes.keys() and self.modes[mode].has_deferred
 
-    def get_mode(self,mode):
+    def get_mode(self,mode:str):
         return self.modes.get(mode,None)
 
-    def add_mode(self,mode,value):
-        self.modes[mode] = value
+    def add_mode(self,mode:str,value:Mode,mode_override:bool):
+        if self.modes.get(mode,False):
+            if mode_override:
+                self.modes[mode].override_value = value
+            else:
+                self.modes[mode].deferred_value = value
+        else:
+            if mode_override:
+                self.modes[mode] = Mode(value,None)
+            else:
+                self.modes[mode] = Mode(None,value)
 
     def delete_mode(self,mode):
         del self.modes[mode]
@@ -82,11 +100,14 @@ class EventController(Sequence):
     EventController Class.
     Contains a series of events with useful ways of accessing them
     '''
-    def __init__(self):
+    def __init__(self,mode_info={}):
         self.events = []
         self.arm_trajectories = {}
         self.annotation_trajectories = {}
         self.mode_trajectories = {}
+        self.mode_overrides = {mode:info['initial']!='defer' for mode,info in mode_info.items()}
+        self.mode_thresholds = {mode:(min([value for key,value in info['values'].items()]),
+                                      max([value for key,value in info['values'].items()])) for mode,info in mode_info.items()}
 
     def __len__(self):
         t = self.times
@@ -107,7 +128,7 @@ class EventController(Sequence):
     def get_event_at_time(self,time):
         return next((e for e in self.events if e.time == time), None)
 
-    def get_arm_trajectory(self,arm,current_time):
+    def get_arm_trajectory(self,arm,current_time:Time):
         try:
             current = [self.arm_trajectories[arm][current_time]]
         except:
@@ -116,7 +137,7 @@ class EventController(Sequence):
         self.arm_trajectories[arm] = poses
         return poses
 
-    def get_annotation_trajectory(self,annotation,current_time):
+    def get_annotation_trajectory(self,annotation,current_time:Time):
         try:
             current = [self.annotation_trajectories[annotation][current_time]]
         except:
@@ -125,14 +146,25 @@ class EventController(Sequence):
         self.annotation_trajectories[annotation] = annotations
         return annotations
 
-    def get_mode_trajectory(self,mode,current_time):
+    def get_mode_trajectory(self,mode,current_time:Time):
         try:
             current = [self.mode_trajectories[mode][current_time]]
         except:
             current = []
-        modes = ModeTrajectory([{'time':current_time,'mode':curent_mode}]+[{'time':event.time,'mode':event.get_mode(mode)} for event in self.events if event.has_mode(mode)])
+        if self.mode_overrides[mode]:
+            future = [{'time':event.time,'mode':event.get_mode(mode).override_value} for event in self.events if event.has_mode(mode,True)]
+        else:
+            future = [{'time':event.time,'mode':event.get_mode(mode).deferred_value} for event in self.events if event.has_mode(mode,False)]
+        modes = ModeTrajectory(current+future)
         self.mode_trajectories[mode] = modes
         return modes
+
+    def set_mode_override(self,current_time:Time,mode:str,value:bool):
+        if mode not in self.mode_overrides.keys() or self.mode_overrides[mode] != value:
+            self.mode_overrides[mode] = value
+            if value:
+                self.delete_all_override_modes_after(current_time,mode)
+            self.mode_trajectories[mode] = ModeTrajectory(current+[{'time':event.time,'mode':event.get_mode(mode)} for event in self.events if event.has_mode(mode,self.mode_overrides[mode])])
 
     def delete_all_poses_after(self,time,arm):
         [event.delete_pose(arm) for event in self.events if event >= time and event.has_pose(arm)]
@@ -143,7 +175,8 @@ class EventController(Sequence):
         self.events = [event for event in self.events if not event.empty]
 
     def delete_all_modes_after(self,time,mode):
-        [event.delete_mode(mode) for event in self.events if event >= time and event.has_mode(mode)]
+        [event.delete_mode(mode) for event in self.events if event >= time and event.has_mode(mode,True)]
+        [event.delete_mode(mode) for event in self.events if event >= time and event.has_mode(mode,False)]
         self.events = [event for event in self.events if not event.empty]
 
     def delete_all_poses_with_group_id(self,group_id):
@@ -169,7 +202,7 @@ class EventController(Sequence):
             self.events.append(event)
             self.events.sort()
 
-    def add_annotation_at_time(self,time,annotation,value):
+    def add_annotation_at_time(self,time:Time,annotation,value):
         if time in self.times:
             event = self.get_event_at_time(time)
             event.add_annotation(annotation,value)
@@ -179,18 +212,21 @@ class EventController(Sequence):
             self.events.append(event)
             self.events.sort()
 
-    def add_mode_at_time(self,time,mode,value):
+    def add_mode_at_time(self,time:Time,mode:str,value:str,override:bool):
         if time in self.times:
             event = self.get_event_at_time(time)
-            event.add_mode(mode,value)
+            event.add_mode(mode,value,override)
         else:
             event = Event(time)
-            event.add_mode(mode,value)
+            event.add_mode(mode,value,override)
             self.events.append(event)
             self.events.sort()
 
-    def timestep_to(self,time):
+    def timestep_to(self,time:Time):
+        # TODO: Capture any annotations that are queued
+        annotations = {annotation:[event.get_annotation(annotation) for event in self.events if event <= time and event.has_annotation(annotation)] for annotation in self.annotation_trajectories.keys()}
         self.events = [event for event in self.events if event >= time]
+        return annotations
 
 
 if __name__ == '__main__':
