@@ -66,9 +66,6 @@ class StateController(object):
     def cancel_annotation(self,annotation):
         pass
 
-    def timestep(self):
-        annotations = self.event_controller.timestep_to(self.now)
-
     def get_initial(self):
         initial = {'actions':[],'modes':{},'arms':{},'annotations':{}}
         for arm in self.arms:
@@ -82,8 +79,9 @@ class StateController(object):
         self.current = initial
         return initial
 
-    def step(self):
-        self.timestep()
+    def timestep(self):
+        annotations = self.event_controller.timestep_to(self.now)
+        self.current["annotations"] = annotations
         return self.current
 
     @staticmethod

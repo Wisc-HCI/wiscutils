@@ -213,8 +213,9 @@ class EventController(Sequence):
 
     def timestep_to(self,time:Time):
         # TODO: Capture any annotations that are queued
+        annotations = {annotation:[event.get_annotation(annotation) for event in self.events if event <= time and event.has_annotation(annotation)] for annotation in self.annotation_trajectories.keys()}
         self.events = [event for event in self.events if event >= time]
-        return []
+        return annotations
 
 
 if __name__ == '__main__':
