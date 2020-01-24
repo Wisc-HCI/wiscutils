@@ -6,6 +6,7 @@ class Event(object):
     Event Class.
     Contains information on poses, annotations, and modes
     '''
+
     def __init__(self, time):
         self.time = time
         self.poses = {}
@@ -46,8 +47,8 @@ class Event(object):
     def get_pose(self,pose):
         return self.poses.get(pose,None)
 
-    def add_pose(self,pose,value):
-        self.poses[pose] = value
+    def add_pose(self,pose,value,group_id):
+        self.poses[pose] = {'value': value, 'group_id': group_id}
 
     def delete_pose(self,pose):
         del self.poses[pose]
@@ -145,13 +146,26 @@ class EventController(Sequence):
         [event.delete_mode(mode) for event in self.events if event >= time and event.has_mode(mode)]
         self.events = [event for event in self.events if not event.empty]
 
-    def add_pose_at_time(self,time,arm,value):
+    def delete_all_poses_with_group_id(self,group_id):
+        # self.events = [event for event in self.events if not event.group_id == group_id]
+        pass
+
+    def add_pose_at_time(self,time,arm,value,group_id):
         if time in self.times:
             event = self.get_event_at_time(time)
-            event.add_pose(arm,value)
+            # delete all poses with the same group_id
+            # deleted_group_ids = []
+            # for pose_arm in event.poses.keys():
+            #     if pose_arm == arm:
+            #         deleted_group_ids.append(event.poses[arm])
+            #
+            # for event in self.events:
+            #     for pose_arm in event.poses.keys():
+            #         if event.poses
+            event.add_pose(arm,value,group_id)
         else:
             event = Event(time)
-            event.add_pose(arm,value)
+            event.add_pose(arm,value,group_id)
             self.events.append(event)
             self.events.sort()
 
