@@ -1,6 +1,5 @@
 from wisc_tools.structures import Mode, Position, Quaternion, Pose, ModeTrajectory, PoseTrajectory, AnnotationTrajectory
 from collections.abc import Sequence
-from rclpy.time import Time
 
 class Event(object):
     '''
@@ -16,24 +15,32 @@ class Event(object):
     def __lt__(self,other):
         if hasattr(other,'time'):
             return self.time < other.time
+        elif hasattr(other,'nanoseconds'):
+            return self.time < float(other.nanoseconds) / 10**9
         else:
             return self.time < other
 
     def __le__(self,other):
         if hasattr(other,'time'):
             return self.time <= other.time
+        elif hasattr(other,'nanoseconds'):
+            return self.time <= float(other.nanoseconds) / 10**9
         else:
             return self.time <= other
 
     def __gt__(self,other):
         if hasattr(other,'time'):
             return self.time > other.time
+        elif hasattr(other,'nanoseconds'):
+            return self.time > float(other.nanoseconds) / 10**9
         else:
             return self.time > other
 
     def __ge__(self,other):
         if hasattr(other,'time'):
             return self.time >= other.time
+        elif hasattr(other,'nanoseconds'):
+            return self.time >= float(other.nanoseconds) / 10**9
         else:
             return self.time >= other
 
@@ -112,17 +119,17 @@ class EventController(Sequence):
     def __iter__(self):
         return self.events.__iter__()
 
-    def __getitem__(self,time):
+    def __getitem__(self,time:float):
         return self.get_event_at_time(time)
 
     @property
     def times(self):
         return [event.time for event in self.events]
 
-    def get_event_at_time(self,time):
+    def get_event_at_time(self,time:float):
         return next((e for e in self.events if e.time == time), None)
 
-    def get_arm_trajectory(self,arm,current_time:Time):
+    def get_arm_trajectory(self,arm:str,current_time:float):
         try:
             current = [self.arm_trajectories[arm][current_time]]
         except:
@@ -131,7 +138,7 @@ class EventController(Sequence):
         self.arm_trajectories[arm] = poses
         return poses
 
-    def get_annotation_trajectory(self,annotation,current_time:Time):
+    def get_annotation_trajectory(self,annotation:str,current_time:float):
         try:
             current = [self.annotation_trajectories[annotation][current_time]]
         except:
@@ -140,7 +147,7 @@ class EventController(Sequence):
         self.annotation_trajectories[annotation] = annotations
         return annotations
 
-    def get_mode_trajectory(self,mode,current_time:Time):
+    def get_mode_trajectory(self,mode:str,current_time:float):
         try:
             current = [self.mode_trajectories[mode][current_time]]
         except:
@@ -153,35 +160,35 @@ class EventController(Sequence):
         self.mode_trajectories[mode] = modes
         return modes
 
-    def set_mode_override(self,current_time:Time,mode:str,value:bool):
+    def set_mode_override(self,current_time:float,mode:str,value:bool):
         if mode not in self.mode_overrides.keys() or self.mode_overrides[mode] != value:
             self.mode_overrides[mode] = value
             if value:
                 self.delete_all_override_modes_after(current_time,mode)
             self.mode_trajectories[mode] = ModeTrajectory(current+[{'time':event.time,'mode':event.get_mode(mode)} for event in self.events if event.has_mode(mode,self.mode_overrides[mode])])
 
-    def delete_all_poses_after(self,time,arm):
+    def delete_all_poses_after(self,time:float,arm:str):
         [event.delete_pose(arm) for event in self.events if event >= time and event.has_pose(arm)]
         self.events = [event for event in self.events if not event.empty]
 
-    def delete_all_annotations_after(self,time,annotation):
+    def delete_all_annotations_after(self,time:float,annotation:str):
         [event.delete_annotation(annotation) for event in self.events if event >= time and event.has_annotation(annotation)]
         self.events = [event for event in self.events if not event.empty]
 
-    def delete_all_modes_after(self,time,mode):
+    def delete_all_modes_after(self,time:float,mode:str):
         [event.delete_mode(mode) for event in self.events if event >= time and event.has_mode(mode,True)]
         [event.delete_mode(mode) for event in self.events if event >= time and event.has_mode(mode,False)]
         self.events = [event for event in self.events if not event.empty]
 
-    def delete_all_override_modes_after(self,time,mode):
+    def delete_all_override_modes_after(self,time:float,mode:str):
         [event.delete_mode(mode) for event in self.events if event >= time and event.has_mode(mode,True)]
         self.events = [event for event in self.events if not event.empty]
 
-    def delete_all_deferred_modes_after(self,time,mode):
+    def delete_all_deferred_modes_after(self,time:float,mode:str):
         [event.delete_mode(mode) for event in self.events if event >= time and event.has_mode(mode,False)]
         self.events = [event for event in self.events if not event.empty]
 
-    def add_pose_at_time(self,time:Time,arm,value):
+    def add_pose_at_time(self,time:float,arm:str,value:Pose):
         if time in self.times:
             event = self.get_event_at_time(time)
             event.add_pose(arm,value)
@@ -191,7 +198,7 @@ class EventController(Sequence):
             self.events.append(event)
             self.events.sort()
 
-    def add_annotation_at_time(self,time:Time,annotation,value):
+    def add_annotation_at_time(self,time:float,annotation:str,value:str):
         if time in self.times:
             event = self.get_event_at_time(time)
             event.add_annotation(annotation,value)
@@ -201,7 +208,8 @@ class EventController(Sequence):
             self.events.append(event)
             self.events.sort()
 
-    def add_mode_at_time(self,time:Time,mode:str,value:str,override:bool):
+    def add_mode_at_time(self,time:float,mode:str,value:str,override:bool):
+        print(type(time))
         if time in self.times:
             event = self.get_event_at_time(time)
             event.add_mode(mode,value,override)
@@ -211,7 +219,7 @@ class EventController(Sequence):
             self.events.append(event)
             self.events.sort()
 
-    def timestep_to(self,time:Time):
+    def timestep_to(self,time:float):
         # TODO: Capture any annotations that are queued
         annotations = {annotation:[event.get_annotation(annotation) for event in self.events if event <= time and event.has_annotation(annotation)] for annotation in self.annotation_trajectories.keys()}
         self.events = [event for event in self.events if event >= time]
