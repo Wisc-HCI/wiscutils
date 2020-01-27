@@ -48,13 +48,8 @@ class Event(object):
     def get_pose(self,pose:str):
         return self.poses.get(pose,None)
 
-<<<<<<< HEAD
     def add_pose(self,pose,value,group_id):
         self.poses[pose] = {'value': value, 'group_id': group_id}
-=======
-    def add_pose(self,pose:str,value:Pose):
-        self.poses[pose] = value
->>>>>>> 12aeeeaa7be6929ec5c092f5db8fcfae40b34de0
 
     def delete_pose(self,pose:str):
         del self.poses[pose]
@@ -181,21 +176,35 @@ class EventController(Sequence):
 
     def delete_all_poses_with_group_id(self,group_id):
         # self.events = [event for event in self.events if not event.group_id == group_id]
-        pass
+        print('deleting all poses with group_id: {}'.format(group_id))
+        new_events = []
+        for event in self.events:
+            new_poses = {}
+            for pose in event.poses.keys():
+                if event.poses[pose]['group_id'] != group_id:
+                    print(event.poses[pose]['group_id'])
+                    new_poses[pose] = event.poses[pose]
+            if len(new_poses) > 0:
+                event.poses = new_poses
+                new_events.append(event)
+        self.events = new_events
 
     def add_pose_at_time(self,time,arm,value,group_id):
         if time in self.times:
             event = self.get_event_at_time(time)
-            # delete all poses with the same group_id
-            # deleted_group_ids = []
-            # for pose_arm in event.poses.keys():
-            #     if pose_arm == arm:
-            #         deleted_group_ids.append(event.poses[arm])
-            #
-            # for event in self.events:
-            #     for pose_arm in event.poses.keys():
-            #         if event.poses
-            event.add_pose(arm,value,group_id)
+
+            if(event.poses.get(arm, None) is not None):
+                self.delete_all_poses_with_group_id(event.poses[arm]['group_id'])
+                event = self.get_event_at_time(time)
+                if event is None:
+                    event = Event(time)
+                    event.add_pose(arm,value,group_id)
+                    self.events.append(event)
+                    self.events.sort()
+                else:
+                    event.add_pose(arm,value,group_id)
+            else:
+                event.add_pose(arm,value,group_id)
         else:
             event = Event(time)
             event.add_pose(arm,value,group_id)
