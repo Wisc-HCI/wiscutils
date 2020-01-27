@@ -8,6 +8,9 @@ class StateController(object):
     Generic StateController Object.
     Handles updates to goals, modes, annotations, and actions
     '''
+
+    next_group_id = 0
+
     def __init__(self, rosnode, arms=[], joints=[], modes={}, actions={}, poses={}, annotations={}):
         self.rosnode = rosnode
         self.new(arms, joints, modes, actions, poses, annotations)
@@ -34,15 +37,29 @@ class StateController(object):
         # Actions piggyback off poses and modes.
         print('Setting action: {0}'.format(action))
         # Get the time to do the first action, and then specify the offsets based on that
-        ttp = self.time_to_pose(action)
-        # runs self.set_mode(with override=False)
+        ttp = self.time_to_pose(action,None)
+
+        for arm in self.actions[action].keys():
+            last = None
+            for event in self.actions[action][arm]:
+                if last is None:
+                    self.event_controller.add_pose_at_time(ttp, arm, event['pose'], self.next_group_id)
+                else:
+                    self.event_controller.add_pose_at_time(ttp + last['time'], arm, event['pose'], self.next_group_id)
+                last = event
+        self.next_group_id += 1
+        [print({'time': event.time, 'poses': event.poses}) for event in self.event_controller.events]
 
     def set_pose(self,arm,pose,offset=None):
         # Estimate the amount of time needed to get to that pose
         print('Setting pose for {0} to {1}'.format(arm, pose))
         # If offset is none, calculate the time to do the event
-        spatial_dist,rotation_dist = self.current['arms'][arm].distance_to(self.poses[arm][pose]['pose'])
-        print('Estimated distance {0}:{1}'.format(spatial_dist,rotation_dist))
+        # spatial_dist,rotation_dist = self.current['arms'][arm].distance_to(self.poses[arm][pose]['pose'])
+        # print('Estimated distance {0}:{1}'.format(spatial_dist,rotation_dist))
+        self.event_controller.add_pose_at_time(0, arm, pose, self.next_group_id)
+        self.next_group_id += 1
+        [print({'time': event.time, 'poses': event.poses}) for event in self.event_controller.events]
+        # self.event_controller.add_pose_at_time()
 
     def set_mode(self,mode,value,offset=None,override=True):
         # Estimate time needed to smoothly apply that mode
@@ -66,7 +83,7 @@ class StateController(object):
         pass
 
     def initialize(self):
-        initial = {'actions':[],'modes':{},'arms':{},'annotations':{}}
+        initial = {'actions':[],'modes':{},'arms':{},'annotations':{},'poses':{}}
         for arm in self.arms:
             defaults = [pose for pose in self.poses[arm].keys() if self.poses[arm][pose]['default']]
             if len(defaults) >= 1:
