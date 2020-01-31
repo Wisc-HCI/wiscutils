@@ -53,7 +53,11 @@ class Event(object):
         return pose in self.poses.keys()
 
     def get_pose(self,pose:str):
-        return self.poses.get(pose,None)
+        pose = self.poses.get(pose,None)
+        if pose:
+            return pose['value']
+        else:
+            return None
 
     def add_pose(self,pose,value,group_id):
         self.poses[pose] = {'value': value, 'group_id': group_id}
@@ -237,7 +241,6 @@ class EventController(Sequence):
             self.events.sort()
 
     def add_mode_at_time(self,time:float,mode:str,value:str,override:bool):
-        print(type(time))
         if time in self.times:
             event = self.get_event_at_time(time)
             event.add_mode(mode,value,override)

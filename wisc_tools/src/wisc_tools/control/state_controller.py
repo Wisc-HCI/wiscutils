@@ -85,12 +85,15 @@ class StateController(object):
     def initialize(self):
         initial = {'actions':[],'modes':{},'arms':{},'annotations':{},'poses':{}}
         for arm in self.arms:
+            now = self.now.nanoseconds / 10**9
             defaults = [pose for pose in self.poses[arm].keys() if self.poses[arm][pose]['default']]
             if len(defaults) >= 1:
                 initial['arms'][arm] = defaults[0]
             else:
                 initial['arms'][arm] = self.poses[arm].keys()[0]
-            self.event_controller.add_pose_at_time(self.now,arm,self.poses[arm][initial['arms'][arm]])
+            pose = self.poses[arm][initial['arms'][arm]]['pose']
+            self.event_controller.add_pose_at_time(now,arm,pose,0)
+            self.event_controller.get_arm_trajectory(arm,now)
         for mode in self.modes.keys():
             initial['modes'][mode] = {'defer':self.modes[mode]['default'] == 'defer','current':self.modes[mode]['initial']}
         self.current = initial

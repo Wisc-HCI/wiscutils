@@ -140,13 +140,23 @@ class Trajectory(ABC):
 
     @property
     def t(self):
-        return [wp['time'] for wp in self.wps]
+        if len(self.wps) < 4:
+            base = self.wps[0]['time']
+            return [base-15,base-10,base-5] + [wp['time'] for wp in self.wps]
+        else:
+            return [wp['time'] for wp in self.wps]
 
     def __len__(self):
         t = self.t
         start = min(t)
         stop = max(t)
         return stop-start
+
+    def __pad__(self,vals):
+        if len(vals) < 4:
+            return [vals[0],vals[0],vals[0]] + vals
+        else:
+            return vals
 
     def __iter__(self):
         return self.wps.__iter__()
@@ -220,19 +230,22 @@ class PoseTrajectory(Trajectory):
 
     @property
     def x(self):
-        return [wp['pose'].position.x for wp in self.wps]
+        return self.__pad__([wp['pose'].position.x for wp in self.wps])
 
     @property
     def y(self):
-        return [wp['pose'].position.y for wp in self.wps]
+        return self.__pad__([wp['pose'].position.y for wp in self.wps])
 
     @property
     def z(self):
-        return [wp['pose'].position.z for wp in self.wps]
+        return self.__pad__([wp['pose'].position.z for wp in self.wps])
 
     @property
     def q(self):
-        return [wp['pose'].quaternion for wp in self.wps]
+        return self.__pad__([wp['pose'].quaternion for wp in self.wps])
+
+    def __filter__(self,value):
+        return value
 
     def __getitem__(self,time):
         times = self.t
@@ -265,9 +278,9 @@ class PoseTrajectory(Trajectory):
         assert len(self.wps) > 0
         times = self.t
         if not self.circuit:
-            self.xfn = interpolate.interp1d(t,self.x,kind=kind,fill_value='extrapolate')
-            self.yfn = interpolate.interp1d(t,self.y,kind=kind,fill_value='extrapolate')
-            self.zfn = interpolate.interp1d(t,self.z,kind=kind,fill_value='extrapolate')
+            self.xfn = interpolate.interp1d(times,self.x,kind=self.kind,fill_value='extrapolate')
+            self.yfn = interpolate.interp1d(times,self.y,kind=self.kind,fill_value='extrapolate')
+            self.zfn = interpolate.interp1d(times,self.z,kind=self.kind,fill_value='extrapolate')
         else:
             xs = self.x
             ys = self.y
@@ -277,6 +290,6 @@ class PoseTrajectory(Trajectory):
             yp = [ys[-2]-ys[-1]]+ys+[ys[1]+ys[-1]]
             zp = [zs[-2]-zs[-1]]+zs+[zs[1]+zs[-1]]
 
-            self.xfn = interpolate.interp1d(tp,xp,kind=kind,fill_value='extrapolate')
-            self.yfn = interpolate.interp1d(tp,yp,kind=kind,fill_value='extrapolate')
-            self.zfn = interpolate.interp1d(tp,zp,kind=kind,fill_value='extrapolate')
+            self.xfn = interpolate.interp1d(tp,xp,kind=self.kind,fill_value='extrapolate')
+            self.yfn = interpolate.interp1d(tp,yp,kind=self.kind,fill_value='extrapolate')
+            self.zfn = interpolate.interp1d(tp,zp,kind=self.kind,fill_value='extrapolate')
