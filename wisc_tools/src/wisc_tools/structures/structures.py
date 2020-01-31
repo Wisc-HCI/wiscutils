@@ -281,6 +281,10 @@ class PoseTrajectory(Trajectory):
             self.xfn = interpolate.interp1d(times,self.x,kind=self.kind,fill_value='extrapolate')
             self.yfn = interpolate.interp1d(times,self.y,kind=self.kind,fill_value='extrapolate')
             self.zfn = interpolate.interp1d(times,self.z,kind=self.kind,fill_value='extrapolate')
+            # TODO: Test whether the code below produces better results
+            # self.xfn = interpolate.UnivariateSpline(times,self.x,ext='const')
+            # self.yfn = interpolate.UnivariateSpline(times,self.y,ext='const')
+            # self.zfn = interpolate.UnivariateSpline(times,self.z,ext='const')
         else:
             xs = self.x
             ys = self.y
