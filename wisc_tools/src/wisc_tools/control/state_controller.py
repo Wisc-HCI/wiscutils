@@ -3,6 +3,16 @@ from wisc_tools.control import EventController
 from rclpy.duration import Duration
 import math
 
+def serialize(input):
+    if isinstance(input, dict):
+        return {key:serialize(value) for key,value in input.items()}
+    elif isinstance(input, list):
+        return [serialize(element) for element in input]
+    elif isinstance(input, Pose):
+        return input.dict
+    else:
+        return input
+
 class StateController(object):
     '''
     Generic StateController Object.
@@ -19,9 +29,13 @@ class StateController(object):
     def now(self):
         return self.rosnode.get_clock().now()
 
+    @property
+    def current_serializable(self):
+        return serialize(self.current)
+
     def new(self, arms, joints, modes, actions, poses, annotations):
         self.event_controller = EventController(modes)
-        self.current = {}
+        self.current = {'actions':[],'modes':{},'arms':{},'annotations':{},'poses':{}}
         self.arms = arms
         self.joints = joints
         self.modes = modes
@@ -48,7 +62,8 @@ class StateController(object):
                     self.event_controller.add_pose_at_time(ttp + last['time'], arm, event['pose'], self.next_group_id)
                 last = event
         self.next_group_id += 1
-        [print({'time': event.time, 'poses': event.poses}) for event in self.event_controller.events]
+        self.timestep()
+        #[print({'time': event.time, 'poses': event.poses}) for event in self.event_controller.events]
 
     def set_pose(self,arm,pose,offset=None):
         # Estimate the amount of time needed to get to that pose
@@ -59,22 +74,24 @@ class StateController(object):
         self.event_controller.add_pose_at_time(0, arm, pose, self.next_group_id)
         self.next_group_id += 1
         [print({'time': event.time, 'poses': event.poses}) for event in self.event_controller.events]
+        self.timestep()
         # self.event_controller.add_pose_at_time()
 
     def set_mode(self,mode,value,offset=None,override=True):
         # Estimate time needed to smoothly apply that mode
-        current_value =  self.modes[mode]['values'][self.current['modes'][mode]['current']]
+        current_time = float(self.now.nanoseconds) * 10**-9
+        current_value =  self.event_controller.mode_trajectories[mode][current_time]
         goal_value = self.modes[mode]['values'][value]
         time_to_mode = self.time_to_mode(current_value,goal_value)
-        mode_time = float((self.now+time_to_mode).nanoseconds) / 10**9
-        print('Setting mode for {0} to {1} in {2}'.format(mode, value, time_to_mode))
-        if override and value == 'defer':
-            self.event_controller.set_mode_override(self.now.nanoseconds / 10**9,mode,False)
-        elif override:
-            self.event_controller.add_mode_at_time(mode_time,mode,value,True)
-            self.event_controller.set_mode_override(self.now.nanoseconds / 10**9,mode,True)
+        mode_time = current_time + time_to_mode
+        print('Setting mode for {0} to {1} in {2}s'.format(mode, value, time_to_mode))
+        if override:
+            self.event_controller.add_mode_at_time(mode_time,mode,goal_value,True)
+            self.event_controller.set_mode_override(current_time,mode,True)
+            #print(self.event_controller.events)
         else:
-            self.event_controller.add_mode_at_time(mode_time,mode,value,False)
+            self.event_controller.set_mode_override(current_time,mode,False)
+        self.timestep()
 
     def cancel_pose(self,arm):
         pass
@@ -85,7 +102,7 @@ class StateController(object):
     def initialize(self):
         initial = {'actions':[],'modes':{},'arms':{},'annotations':{},'poses':{}}
         for arm in self.arms:
-            now = self.now.nanoseconds / 10**9
+            now = float(self.now.nanoseconds) * 10**-9
             defaults = [pose for pose in self.poses[arm].keys() if self.poses[arm][pose]['default']]
             if len(defaults) >= 1:
                 initial['arms'][arm] = defaults[0]
@@ -95,19 +112,31 @@ class StateController(object):
             self.event_controller.add_pose_at_time(now,arm,pose,0)
             self.event_controller.get_arm_trajectory(arm,now)
         for mode in self.modes.keys():
-            initial['modes'][mode] = {'defer':self.modes[mode]['default'] == 'defer','current':self.modes[mode]['initial']}
+            override = self.modes[mode]['override']
+            value = self.modes[mode]['value']
+            current_value = self.modes[mode]['values'][value]
+            initial['modes'][mode] = {'override':override,'name':value,'value':current_value}
+            self.event_controller.add_mode_at_time(now,mode,current_value,override)
         self.current = initial
         return initial
 
     def timestep(self):
-        time = float(self.now.nanoseconds) / 10**9
+        time = float(self.now.nanoseconds) * 10**-9
         annotations = self.event_controller.timestep_to(time)
         self.current["annotations"] = annotations
         for arm in self.arms:
             self.current['arms'][arm] = self.event_controller.arm_trajectories[arm][time]
         for mode in self.modes.keys():
-            self.current['modes'][mode] = self.event_controller.mode_trajectories[mode][time]
-        return self.current
+            current = self.event_controller.mode_trajectories[mode][time]
+            name = None
+            for value_name,value in self.modes[mode]['values'].items():
+                if value == current:
+                    name = value_name
+            self.current['modes'][mode] = {'override':self.event_controller.mode_overrides[mode],
+                                           'name':name,
+                                           'value':self.event_controller.mode_trajectories[mode][time]}
+
+        return serialize(self.current)
 
     @staticmethod
     def time_to_pose(current_pose,goal_pose):
@@ -117,7 +146,7 @@ class StateController(object):
     @staticmethod
     def time_to_mode(current_mode,mode_goal):
         # Hard coded for the time being.
-        return Duration(seconds=math.fabs(current_mode-mode_goal)*10)
+        return math.fabs(current_mode-mode_goal)*10
 
     @staticmethod
     def events_to_multiarm_trajectory(self,events):

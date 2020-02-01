@@ -45,6 +45,9 @@ class Event(object):
         else:
             return self.time >= other
 
+    def __repr__(self):
+        return '\n\tposes:{0}, \n\tmodes:{1}, \n\tannotations:{1}'.format(self.poses,self.modes,self.annotations)
+
     @property
     def empty(self):
         return not (len(self.poses) > 0 or len(self.annotations) > 0 or len([mode for mode in self.modes if not mode.empty]) > 0)
@@ -111,7 +114,7 @@ class EventController(Sequence):
         self.arm_trajectories = {}
         self.annotation_trajectories = {}
         self.mode_trajectories = {}
-        self.mode_overrides = {mode:info['initial']!='defer' for mode,info in mode_info.items()}
+        self.mode_overrides = {mode:info['override'] for mode,info in mode_info.items()}
         self.mode_thresholds = {mode:(min([value for key,value in info['values'].items()]),
                                       max([value for key,value in info['values'].items()])) for mode,info in mode_info.items()}
 
@@ -154,7 +157,7 @@ class EventController(Sequence):
 
     def get_mode_trajectory(self,mode:str,current_time:float):
         try:
-            current = [self.mode_trajectories[mode][current_time]]
+            current = [{'time':current_time,'mode':self.mode_trajectories[mode][current_time]}]
         except:
             current = []
         if self.mode_overrides[mode]:
@@ -167,10 +170,16 @@ class EventController(Sequence):
 
     def set_mode_override(self,current_time:float,mode:str,value:bool):
         if mode not in self.mode_overrides.keys() or self.mode_overrides[mode] != value:
+            print('Changing override for {0} to {1}'.format(mode,value))
             self.mode_overrides[mode] = value
+            try:
+                current = [self.mode_trajectories[mode][current_time]]
+            except:
+                current = []
             if value:
                 self.delete_all_override_modes_after(current_time,mode)
-            self.mode_trajectories[mode] = ModeTrajectory(current+[{'time':event.time,'mode':event.get_mode(mode)} for event in self.events if event.has_mode(mode,self.mode_overrides[mode])])
+            print('adding mode {0}'.format(mode))
+            self.get_mode_trajectory(mode,current_time)
 
     def delete_all_poses_after(self,time:float,arm:str):
         [event.delete_pose(arm) for event in self.events if event >= time and event.has_pose(arm)]
@@ -242,13 +251,17 @@ class EventController(Sequence):
 
     def add_mode_at_time(self,time:float,mode:str,value:str,override:bool):
         if time in self.times:
+            print('Time exists, adding to event')
             event = self.get_event_at_time(time)
             event.add_mode(mode,value,override)
         else:
+            print('Creating new event')
             event = Event(time)
             event.add_mode(mode,value,override)
             self.events.append(event)
             self.events.sort()
+        print(self.events)
+        self.get_mode_trajectory(mode,time)
 
     def timestep_to(self,time:float):
         # TODO: Capture any annotations that are queued

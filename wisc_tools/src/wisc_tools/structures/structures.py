@@ -31,6 +31,9 @@ class Mode(object):
     def has_deferred(self):
         return self.deferred_value != None
 
+    def __repr__(self):
+        return '[override:{0},defer:{1}]'.format(self.override_value,self.deferred_value)
+
 class Position(object):
     def __init__(self,x,y,z):
         self.x = x
@@ -56,6 +59,9 @@ class Position(object):
     def distance_to(self,other):
         return math.sqrt(math.pow(self.x-other.x,2)+math.pow(self.y-other.y,2)+math.pow(self.z-other.z,2))
 
+    def __repr__(self):
+        return '[x:{0},y:{1},z:{2}]'.format(self.x,self.y,self.z)
+
 class Quaternion(pyQuaternion):
 
     @property
@@ -64,8 +70,13 @@ class Quaternion(pyQuaternion):
 
     @property
     def ros_euler(self):
-        (r,p,y) = transformations.euler_from_quaternion(self.ros_quaternion)
+        (r,p,y) = transformations.euler_from_quaternion([self.w,self.x,self.y,self.z],'szyx')
         return Euler(r=r,p=p,y=y)
+
+    @property
+    def dict(self):
+        (r,p,y) = transformations.euler_from_quaternion([self.w,self.x,self.y,self.z],'szyx')
+        return {'r':r,'p':p,'y':y}
 
     @classmethod
     def from_vector_quaternion(self,vector):
@@ -125,8 +136,15 @@ class Pose(object):
     def from_ros_pose(self,pose):
         return Pose(position=Position.from_ros_vector3(pose.position),orientation=Quaternion.from_ros_quaternion(pose.orientation))
 
+    @property
+    def dict(self):
+        return {'position':self.position.dict,'rotation':self.quaternion.dict}
+
     def distance_to(self,pose):
         return (self.position.distance_to(pose.position),self.quaternion.distance_to(pose.quaternion))
+
+    def __repr__(self):
+        return '({0}, {1})'.format(self.position,self.quaternion)
 
 class Trajectory(ABC):
 
@@ -169,15 +187,17 @@ class Trajectory(ABC):
     def __interpolate__(self):
         pass
 
+    def __repr__(self):
+        return '[{0}]'.format(','.join(self.wps))
+
 class ModeTrajectory(Trajectory):
 
     def __init__(self,waypoints,fill='interpolate',kind='cubic',circuit=False,min_value=None,max_value=None):
-        self.fill = fill
         super(ModeTrajectory,self).__init__(waypoints,kind='cubic',circuit=False,min_value=None,max_value=None)
 
     @property
     def v(self):
-        return [wp['mode'] for wp in self.wps]
+        return self.__pad__([wp['mode'] for wp in self.wps])
 
     def __getitem__(self,time):
         if self.circuit:
@@ -186,10 +206,12 @@ class ModeTrajectory(Trajectory):
         return self.__filter__(self.vfn(time))
 
     def __filter__(self,value):
-        if self.min_value != None and self.min_value > value:
-            return self.min_value
-        elif self.max_value != None and self.max_value < value:
-            return self.max_value
+        if type(value) == np.ndarray:
+            value = float(value)
+        if min(self.v) > value:
+            return min(self.v)
+        elif max(self.v) < value:
+            return max(self.v)
         else:
             return value
 
@@ -245,6 +267,8 @@ class PoseTrajectory(Trajectory):
         return self.__pad__([wp['pose'].quaternion for wp in self.wps])
 
     def __filter__(self,value):
+        if type(value) == np.ndarray:
+            value = float(value)
         return value
 
     def __getitem__(self,time):
