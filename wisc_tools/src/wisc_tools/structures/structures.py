@@ -160,7 +160,7 @@ class Trajectory(ABC):
     def t(self):
         if len(self.wps) < 4:
             base = self.wps[0]['time']
-            return [base-15,base-10,base-5] + [wp['time'] for wp in self.wps]
+            return [base-20,base-15,base-10,base-5] + [wp['time'] for wp in self.wps]
         else:
             return [wp['time'] for wp in self.wps]
 
@@ -172,7 +172,7 @@ class Trajectory(ABC):
 
     def __pad__(self,vals):
         if len(vals) < 4:
-            return [vals[0],vals[0],vals[0]] + vals
+            return [vals[0],vals[0],vals[0],vals[0]] + vals
         else:
             return vals
 
