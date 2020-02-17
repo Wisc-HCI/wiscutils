@@ -50,7 +50,7 @@ class Event(object):
 
     @property
     def empty(self):
-        return not (len(self.poses) > 0 or len(self.annotations) > 0 or len([mode for mode in self.modes if not mode.empty]) > 0)
+        return not (len(self.poses) > 0 or len(self.annotations) > 0 or len([mode for mode in self.modes if not mode['value'].empty]) > 0)
 
     def has_pose(self,pose:str):
         return pose in self.poses.keys()

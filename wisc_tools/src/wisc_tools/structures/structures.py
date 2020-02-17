@@ -160,9 +160,9 @@ class Trajectory(ABC):
     def t(self):
         if len(self.wps) < 4:
             base = self.wps[0]['time']
-            return [base-20,base-15,base-10,base-5] + [wp['time'] for wp in self.wps]
+            return [base-20,base-15,base-10,base-5] + [wp['time'] for wp in self.wps] + [self.wps[-1]['time']+5, self.wps[-1]['time']+10, self.wps[-1]['time']+15]
         else:
-            return [wp['time'] for wp in self.wps]
+            return [wp['time'] for wp in self.wps] + [self.wps[-1]['time']+5, self.wps[-1]['time']+10, self.wps[-1]['time']+15]
 
     def __len__(self):
         t = self.t
@@ -172,9 +172,9 @@ class Trajectory(ABC):
 
     def __pad__(self,vals):
         if len(vals) < 4:
-            return [vals[0],vals[0],vals[0],vals[0]] + vals
+            return [vals[0],vals[0],vals[0],vals[0]] + vals + [vals[-1],vals[-1],vals[-1]]
         else:
-            return vals
+            return vals + [vals[-1],vals[-1],vals[-1]]
 
     def __iter__(self):
         return self.wps.__iter__()
@@ -220,11 +220,13 @@ class ModeTrajectory(Trajectory):
         t = self.t
         v = self.v
         if not self.circuit:
-            self.vfn = interpolate.interp1d(t,v,kind=self.kind,fill_value='extrapolate')
+            #self.vfn = interpolate.interp1d(t,v,kind=self.kind,fill_value='extrapolate')
+            self.vfn = interpolate.UnivariateSpline(t,v,ext='const')
         else:
             tp = [t[-2]-t[-1]]+t+[t[1]+t[-1]]
             vp = [v[-2]-v[-1]]+v+[v[1]+v[-1]]
-            self.vfn = interpolate.interp1d(tp,vp,kind=self.kind,fill_value='extrapolate')
+            self.vfn = interpolate.UnivariateSpline(t,v,ext='const')
+            #self.vfn = interpolate.interp1d(tp,vp,kind=self.kind,fill_value='extrapolate')
 
 class AnnotationTrajectory(Trajectory):
 
@@ -279,7 +281,7 @@ class PoseTrajectory(Trajectory):
         x = self.__filter__(self.xfn(time))
         y = self.__filter__(self.yfn(time))
         z = self.__filter__(self.zfn(time))
-
+        q = self.q
         pos = Position(x,y,z)
 
         start = min(times)
@@ -291,24 +293,24 @@ class PoseTrajectory(Trajectory):
         else:
             for start_idx,pair in enumerate(pairwise(times)):
                 if pair[0] <= time <= pair[1]:
-                    quat1 = self.wps[start_idx]['pose'].quaternion
-                    quat2 = self.wps[start_idx+1]['pose'].quaternion
-                    quat_times = (self.wps[start_idx]['time'],self.wps[start_idx+1]['time'])
-                percent = (time - quat_times[0]) / (quat_times[1] - quat_times[0])
-                quat = Quaternion.from_py_quaternion(pyQuaternion.slerp(quat1,quat2,percent))
+                    quat1 = q[start_idx]
+                    quat2 = q[start_idx+1]
+                    quat_times = (pair[0],pair[1])
+            percent = (time - quat_times[0]) / (quat_times[1] - quat_times[0])
+            quat = Quaternion.from_py_quaternion(pyQuaternion.slerp(quat1,quat2,percent))
         return Pose(pos,quat)
 
     def __interpolate__(self):
         assert len(self.wps) > 0
         times = self.t
         if not self.circuit:
-            self.xfn = interpolate.interp1d(times,self.x,kind=self.kind,fill_value='extrapolate')
-            self.yfn = interpolate.interp1d(times,self.y,kind=self.kind,fill_value='extrapolate')
-            self.zfn = interpolate.interp1d(times,self.z,kind=self.kind,fill_value='extrapolate')
+            # self.xfn = interpolate.interp1d(times,self.x,kind=self.kind,fill_value='extrapolate')
+            # self.yfn = interpolate.interp1d(times,self.y,kind=self.kind,fill_value='extrapolate')
+            # self.zfn = interpolate.interp1d(times,self.z,kind=self.kind,fill_value='extrapolate')
             # TODO: Test whether the code below produces better results
-            # self.xfn = interpolate.UnivariateSpline(times,self.x,ext='const')
-            # self.yfn = interpolate.UnivariateSpline(times,self.y,ext='const')
-            # self.zfn = interpolate.UnivariateSpline(times,self.z,ext='const')
+            self.xfn = interpolate.UnivariateSpline(times,self.x,ext='const')
+            self.yfn = interpolate.UnivariateSpline(times,self.y,ext='const')
+            self.zfn = interpolate.UnivariateSpline(times,self.z,ext='const')
         else:
             xs = self.x
             ys = self.y
@@ -317,7 +319,6 @@ class PoseTrajectory(Trajectory):
             xp = [xs[-2]-xs[-1]]+xs+[xs[1]+xs[-1]]
             yp = [ys[-2]-ys[-1]]+ys+[ys[1]+ys[-1]]
             zp = [zs[-2]-zs[-1]]+zs+[zs[1]+zs[-1]]
-
-            self.xfn = interpolate.interp1d(tp,xp,kind=self.kind,fill_value='extrapolate')
-            self.yfn = interpolate.interp1d(tp,yp,kind=self.kind,fill_value='extrapolate')
-            self.zfn = interpolate.interp1d(tp,zp,kind=self.kind,fill_value='extrapolate')
+            self.xfn = interpolate.UnivariateSpline(tp,xp,ext='const')
+            self.yfn = interpolate.UnivariateSpline(tp,yp,ext='const')
+            self.zfn = interpolate.UnivariateSpline(tp,zp,ext='const')

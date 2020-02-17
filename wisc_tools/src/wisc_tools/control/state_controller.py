@@ -62,30 +62,38 @@ class StateController(object):
         times = list(np.linspace(now, now+5, 10))
         plan = [trajectory[time] for time in times]
         return {
-          'name': arm,
-          'x': [t.position.x for t in plan],
-          'y': [t.position.y for t in plan],
-          'z': [t.position.z for t in plan],
-          'type': 'scatter3d',
-          'mode': 'lines+markers',
-          'line': {'color': [t-now for t in times],
-                   'colorscale': "Viridis"},
-          'marker': {'color': [t-now for t in times],
-                     'colorscale': "Viridis"}
-        }
+                'name':arm,
+                'points':[[point.position.y,point.position.z,point.position.x] for point in plan]
+               }
+        # return {
+        #   'name': arm,
+        #   'x': [t.position.x for t in plan],
+        #   'y': [t.position.y for t in plan],
+        #   'z': [t.position.z for t in plan],
+        #   'type': 'scatter3d',
+        #   'mode': 'lines+markers',
+        #   'line': {'color': [t-now for t in times],
+        #            'colorscale': "Viridis"},
+        #   'marker': {'color': [t-now for t in times],
+        #              'colorscale': "Viridis"}
+        # }
 
     def mode_future(self,mode,trajectory):
         now = self.now
-        times = list(np.linspace(now, now+5, 10))
+        times = list(np.linspace(now, now+5, 20))
         plan = [trajectory[time] for time in times]
         return {
-          'name': mode,
-          'x': [t-now for t in times],
-          'y': plan,
-          'type': 'scatter',
-          'opacity': 0.5,
-          'mode': 'lines+markers'
-        }
+                'name':mode,
+                'values':plan
+               }
+        # return {
+        #   'name': mode,
+        #   'x': [t-now for t in times],
+        #   'y': plan,
+        #   'type': 'scatter',
+        #   'opacity': 0.5,
+        #   'mode': 'lines+markers'
+        # }
 
 
     def set_action(self,action):
@@ -111,10 +119,15 @@ class StateController(object):
         # Estimate the amount of time needed to get to that pose
         print('Setting pose for {0} to {1}'.format(arm, pose))
         # If offset is none, calculate the time to do the event
-        tte = 0 # Currently Hardcoded
+        goal_pose = self.poses[arm][pose]['pose']
+        current_time = self.now
+        current_pose =  self.event_controller.arm_trajectories[arm][current_time]
+        if offset == None:
+            offset = self.time_to_pose(current_pose,goal_pose)
+
         # spatial_dist,rotation_dist = self.current['arms'][arm].distance_to(self.poses[arm][pose]['pose'])
         # print('Estimated distance {0}:{1}'.format(spatial_dist,rotation_dist))
-        self.event_controller.add_pose_at_time(self.now, self.now+tte, arm, pose, self.next_group_id)
+        self.event_controller.add_pose_at_time(self.now, self.now+offset, arm, goal_pose, self.next_group_id)
         self.next_group_id += 1
         # [print({'time': event.time, 'poses': event.poses}) for event in self.event_controller.events]
         self.timestep()
@@ -122,9 +135,16 @@ class StateController(object):
 
     def set_mode(self,mode,value,offset=None,override=True):
         # Estimate time needed to smoothly apply that mode
+        print('Mode',mode)
+        print('Value',value)
+        print('Override',override)
         current_time = self.now
         current_value =  self.event_controller.mode_trajectories[mode][current_time]
-        goal_value = self.modes[mode]['values'][value]
+        if value != None:
+            goal_value = self.modes[mode]['values'][value]
+        else:
+            goal_value = current_value
+
         time_to_mode = self.time_to_mode(current_value,goal_value)
         mode_time = current_time + time_to_mode
         print('Setting mode for {0} to {1} in {2}s'.format(mode, value, time_to_mode))
@@ -176,8 +196,9 @@ class StateController(object):
 
     @staticmethod
     def time_to_pose(current_pose,goal_pose):
-        # Hard coded for the time being.
-        return 0
+        spatial_dist, rotational_dist = current_pose.distance_to(goal_pose)
+        print(spatial_dist,rotational_dist)
+        return max([spatial_dist*20,rotational_dist*5])
 
     @staticmethod
     def time_to_mode(current_mode,mode_goal):
