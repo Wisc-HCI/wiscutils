@@ -7,6 +7,32 @@ from geometry_msgs.msg import Quaternion as rosQuaternion
 from geometry_msgs.msg import Pose as rosPose
 from wiscutils.msg import EulerPose, EEPoseGoals
 from wiscutils.convenience import pairwise
+from wiscutils.conversions import transformations
+from abc import ABCMeta, abstractmethod
+
+class Mode(object):
+    '''
+    Mode Class
+    Itty bitty mode object that handles override and deferred values
+    '''
+    def __init__(self, override_value=None, deferred_value=None):
+        self.deferred_value = deferred_value
+        self.override_value = override_value
+
+    @property
+    def empty(self):
+        return self.override_value == None and self.deferred_value == None
+
+    @property
+    def has_override(self):
+        return self.override_value != None
+
+    @property
+    def has_deferred(self):
+        return self.deferred_value != None
+
+    def __repr__(self):
+        return '[override:{0},defer:{1}]'.format(self.override_value,self.deferred_value)
 
 class Position(object):
     def __init__(self,x,y,z):
@@ -24,11 +50,17 @@ class Position(object):
 
     @property
     def dict(self):
-        return {"x":self.x,"y":self.y,"z":self.z}
+        return {'x':self.x,'y':self.y,'z':self.z}
 
     @classmethod
     def from_ros_vector3(cls,vector3):
         return Position(x=vector3.x,y=vector3.y,z=vector3.z)
+
+    def distance_to(self,other):
+        return math.sqrt(math.pow(self.x-other.x,2)+math.pow(self.y-other.y,2)+math.pow(self.z-other.z,2))
+
+    def __repr__(self):
+        return '[x:{0},y:{1},z:{2}]'.format(self.x,self.y,self.z)
 
 class Quaternion(pyQuaternion):
 
@@ -38,8 +70,17 @@ class Quaternion(pyQuaternion):
 
     @property
     def ros_euler(self):
-        (r,p,y) = tf.transformations.euler_from_quaternion(self.ros_quaternion)
-        return rosVector3(x=r,y=p,z=y)
+        (r,p,y) = transformations.euler_from_quaternion([self.w,self.x,self.y,self.z],'szyx')
+        return Euler(r=r,p=p,y=y)
+
+    @property
+    def dict(self):
+        (r,p,y) = transformations.euler_from_quaternion([self.w,self.x,self.y,self.z],'szyx')
+        return {'r':r,'p':p,'y':y}
+
+    @classmethod
+    def from_vector_quaternion(self,vector):
+        return Quaternion(w=vector[0],x=vector[1],y=vector[2],z=vector[3])
 
     @classmethod
     def from_py_quaternion(self,pyquaternion):
@@ -47,12 +88,20 @@ class Quaternion(pyQuaternion):
 
     @classmethod
     def from_ros_quaternion(self,quaternion):
-        return Quaternion(x=quaterion.x,y=quaternion.y,z=quaternion.z,w=quaternion.w)
+        return Quaternion(x=quaternion.x,y=quaternion.y,z=quaternion.z,w=quaternion.w)
 
     @classmethod
-    def from_ros_euler(self,euler,form='sxyz'):
-        tf_quat = tf.transformations.quaternion_from_euler(euler.x,euler.y,euler.z,form)
-        return Quaternion.from_ros_quaternion(tf_quat)
+    def from_ros_euler(self,euler):
+        tf_quat = transformations.quaternion_from_euler(euler.r,euler.p,euler.y,'szyx')
+        return Quaternion.from_vector_quaternion(tf_quat)
+
+    @classmethod
+    def from_euler_dict(self,dict):
+        tf_quat = transformations.quaternion_from_euler(dict['r'],dict['p'],dict['y'])
+        return Quaternion.from_vector_quaternion(tf_quat)
+
+    def distance_to(self,other):
+        return pyQuaternion.distance(self,other)
 
 class Pose(object):
     def __init__(self,position,quaternion):
@@ -72,136 +121,204 @@ class Pose(object):
         pass
 
     @classmethod
+    def from_eulerpose_dict(cls,dict):
+        position = Position(**dict['position'])
+        quaternion = Quaternion.from_euler_dict(dict['rotation'])
+        return cls(position,quaternion)
+
+    @classmethod
+    def from_pose_dict(cls,dict):
+        position = Position(**dict['position'])
+        quaternion = Quaternion(**dict['quaternion'])
+        return cls(position,quaternion)
+
+    @classmethod
     def from_ros_pose(self,pose):
         return Pose(position=Position.from_ros_vector3(pose.position),orientation=Quaternion.from_ros_quaternion(pose.orientation))
 
+    @property
+    def dict(self):
+        return {'position':self.position.dict,'rotation':self.quaternion.dict}
 
-class Waypoint(object):
-    def __init__(self, time, pose, annotation={}):
-        self.time = time
-        self.pose = pose
-        self.annotation = annotation
+    def distance_to(self,pose):
+        return (self.position.distance_to(pose.position),self.quaternion.distance_to(pose.quaternion))
 
-class Trajectory(object):
-    def __init__(self, waypoints):
+    def __repr__(self):
+        return '({0}, {1})'.format(self.position,self.quaternion)
+
+class Trajectory(ABCMeta):
+
+    def __init__(self,waypoints,kind='cubic',circuit=False,min_value=None,max_value=None):
         self.wps = waypoints
-
-    def annotation(self,field):
-        return [wp.annotation[field] for wp in self.wps]
+        self.kind = kind
+        self.circuit = circuit
+        self.min_value = min_value
+        self.max_Value = max_value
+        self.__interpolate__()
 
     @property
     def t(self):
-        return [wp.time for wp in self.wps]
+        if len(self.wps) < 4:
+            base = self.wps[0]['time']
+            return [base-20,base-15,base-10,base-5] + [wp['time'] for wp in self.wps] + [self.wps[-1]['time']+5, self.wps[-1]['time']+10, self.wps[-1]['time']+15]
+        else:
+            return [wp['time'] for wp in self.wps] + [self.wps[-1]['time']+5, self.wps[-1]['time']+10, self.wps[-1]['time']+15]
+
+    def __len__(self):
+        t = self.t
+        start = min(t)
+        stop = max(t)
+        return stop-start
+
+    def __pad__(self,vals):
+        if len(vals) < 4:
+            return [vals[0],vals[0],vals[0],vals[0]] + vals + [vals[-1],vals[-1],vals[-1]]
+        else:
+            return vals + [vals[-1],vals[-1],vals[-1]]
+
+    def __iter__(self):
+        return self.wps.__iter__()
+
+    @abstractmethod
+    def __filter__(self,value):
+        return value
+
+    @abstractmethod
+    def __interpolate__(self):
+        pass
+
+    def __repr__(self):
+        return '[{0}]'.format(','.join(self.wps))
+
+class ModeTrajectory(Trajectory):
+
+    def __init__(self,waypoints,fill='interpolate',kind='cubic',circuit=False,min_value=None,max_value=None):
+        super(ModeTrajectory,self).__init__(waypoints,kind='cubic',circuit=False,min_value=None,max_value=None)
+
+    @property
+    def v(self):
+        return self.__pad__([wp['mode'] for wp in self.wps])
+
+    def __getitem__(self,time):
+        if self.circuit:
+            start = min(self.t)
+            time = time - start % (len(self) + start)
+        return self.__filter__(self.vfn(time))
+
+    def __filter__(self,value):
+        if type(value) == np.ndarray:
+            value = float(value)
+        if min(self.v) > value:
+            return min(self.v)
+        elif max(self.v) < value:
+            return max(self.v)
+        else:
+            return value
+
+    def __interpolate__(self):
+        assert len(self.wps) > 0
+        t = self.t
+        v = self.v
+        if not self.circuit:
+            #self.vfn = interpolate.interp1d(t,v,kind=self.kind,fill_value='extrapolate')
+            self.vfn = interpolate.UnivariateSpline(t,v,ext='const')
+        else:
+            tp = [t[-2]-t[-1]]+t+[t[1]+t[-1]]
+            vp = [v[-2]-v[-1]]+v+[v[1]+v[-1]]
+            self.vfn = interpolate.UnivariateSpline(t,v,ext='const')
+            #self.vfn = interpolate.interp1d(tp,vp,kind=self.kind,fill_value='extrapolate')
+
+class AnnotationTrajectory(Trajectory):
+
+    @property
+    def a(self):
+        return [wp['annotation'] for wp in self.wps]
+
+    def __getitem__(self,time):
+        if self.circuit:
+            start = min(self.t)
+            time = time - start % (len(self) + start)
+        if time in self.t:
+            return [event['annotation'] for event in self.wps][0]
+        else:
+            return None
+
+    def __filter__(self,value):
+        return value
+
+    def __interpolate__(self):
+        pass
+
+
+class PoseTrajectory(Trajectory):
 
     @property
     def x(self):
-        return [wp.pose.position.x for wp in self.wps]
+        return self.__pad__([wp['pose'].position.x for wp in self.wps])
 
     @property
     def y(self):
-        return [wp.pose.position.y for wp in self.wps]
+        return self.__pad__([wp['pose'].position.y for wp in self.wps])
 
     @property
     def z(self):
-        return [wp.pose.position.z for wp in self.wps]
+        return self.__pad__([wp['pose'].position.z for wp in self.wps])
 
     @property
     def q(self):
-        return [wp.pose.quaternion for wp in self.wps]
+        return self.__pad__([wp['pose'].quaternion for wp in self.wps])
 
-    def __getitem__(self,index):
-        return self.wps[index]
+    def __filter__(self,value):
+        if type(value) == np.ndarray:
+            value = float(value)
+        return value
 
-    def interpolate(self, resolution, circuit=False, annotations=[], kind='cubic'):
-        """interpolate.
+    def __getitem__(self,time):
+        times = self.t
+        if self.circuit:
+            start = min(times)
+            time = time - start % (len(self) + start)
+        x = self.__filter__(self.xfn(time))
+        y = self.__filter__(self.yfn(time))
+        z = self.__filter__(self.zfn(time))
+        q = self.q
+        pos = Position(x,y,z)
 
-        Parameters
-        ----------
-        resolution : float/int
-            The resolution in seconds.
-        circuit : type
-            Calculate with wraparound, first and last waypoint must have same poses.
-
-        Returns
-        -------
-        trajectory
-            new Trajectory object with specified resolution.
-
-        """
-        if len(self.wps) == 0:
-            return self
-        a = {}
-        if not circuit:
-            x = interpolate.interp1d(self.t,self.x,kind=kind)
-            y = interpolate.interp1d(self.t,self.y,kind=kind)
-            z = interpolate.interp1d(self.t,self.z,kind=kind)
-            for annotation in annotations:
-                a[annotation] = interpolate.interp1d(self.t,self.annotation(annotation),kind=kind)
+        start = min(times)
+        stop = max(times)
+        if time < start:
+            quat = self.wps[0]['pose'].quaternion
+        elif time > stop:
+            quat = self.wps[-1]['pose'].quaternion
         else:
-            original = {"t":self.t,"x":self.x,"y":self.y,"z":self.z}
-            for annotation in annotations:
-                original[annotation] = self.annotation(annotation)
-            tp = [original["t"][-2]-original["t"][-1]]+self.t+[original["t"][1]+original["t"][-1]]
-            xp = [original["x"][-2]-original["x"][-1]]+self.x+[original["x"][1]+original["x"][-1]]
-            yp = [original["y"][-2]-original["y"][-1]]+self.y+[original["y"][1]+original["y"][-1]]
-            zp = [original["z"][-2]-original["z"][-1]]+self.z+[original["z"][1]+original["z"][-1]]
-            aps = {}
-            for annotation in annotations:
-                aps[annotation] = [original[annotation][-2]-original[annotation][-1]]+self.annotation(annotation)+[original[annotation][1]+original[annotation][-1]]
+            for start_idx,pair in enumerate(pairwise(times)):
+                if pair[0] <= time <= pair[1]:
+                    quat1 = q[start_idx]
+                    quat2 = q[start_idx+1]
+                    quat_times = (pair[0],pair[1])
+            percent = (time - quat_times[0]) / (quat_times[1] - quat_times[0])
+            quat = Quaternion.from_py_quaternion(pyQuaternion.slerp(quat1,quat2,percent))
+        return Pose(pos,quat)
 
-            x = interpolate.interp1d(tp,xp,kind=kind)
-            y = interpolate.interp1d(tp,yp,kind=kind)
-            z = interpolate.interp1d(tp,zp,kind=kind)
-            for annotation in annotations:
-                a[annotation] = interpolate.interp1d(tp,aps[annotation],kind=kind)
-
-        total_time = max(self.t)
-        indices = np.arange(0,total_time+resolution,resolution)
-        x_result = x(indices)
-        y_result = y(indices)
-        z_result = z(indices)
-        annot_result = {annotation:a[annotation](indices) for annotation in annotations}
-
-        quat_results = [Quaternion.from_py_quaternion(self.wps[0].pose.quaternion)]
-        for wp1, wp2 in pairwise(self.wps):
-            n = int((wp2.time - wp1.time)/resolution)-1
-            quat_results.extend([Quaternion.from_py_quaternion(q) for q in Quaternion.intermediates(wp1.pose.quaternion,wp2.pose.quaternion,n=n,include_endpoints=False)])
-            quat_results.append(Quaternion.from_py_quaternion(wp2.pose.quaternion))
-
-        wps = []
-        for i in range(0,len(quat_results)):
-            wps.append(Waypoint(indices[i],Pose(Position(x_result[i],y_result[i],z_result[i]),
-                                                quat_results[i]),
-                                annotation={annot:annot_result[annot][i] for annot in annotations}))
-        return Trajectory(wps)
-
-class MultiArmTrajectory(object):
-    def __init__(self,arm_trajectories={},arm_order=None):
-        self.arm_trajectories = arm_trajectories
-        if arm_order == None:
-            self.arm_order = list(self.arm_trajectories.keys())
+    def __interpolate__(self):
+        assert len(self.wps) > 0
+        times = self.t
+        if not self.circuit:
+            # self.xfn = interpolate.interp1d(times,self.x,kind=self.kind,fill_value='extrapolate')
+            # self.yfn = interpolate.interp1d(times,self.y,kind=self.kind,fill_value='extrapolate')
+            # self.zfn = interpolate.interp1d(times,self.z,kind=self.kind,fill_value='extrapolate')
+            # TODO: Test whether the code below produces better results
+            self.xfn = interpolate.UnivariateSpline(times,self.x,ext='const')
+            self.yfn = interpolate.UnivariateSpline(times,self.y,ext='const')
+            self.zfn = interpolate.UnivariateSpline(times,self.z,ext='const')
         else:
-            self.arm_order = arm_order
-
-    def interpolate(self, resolution, circuit=False, annotations={}):
-        trajectories = {}
-        for arm,goal in self.arm_trajectories.iteritems():
-            annot = []
-            if arm in annotations:
-                annot = annotations[arm]
-            trajectories[arm] = goal.interpolate(resolution,circuit,annot)
-
-        return MultiArmTrajectory(trajectories,self.arm_order)
-
-    @property
-    def ros_eeposegoals(self):
-        eeposegoals = []
-        for posegoal in self:
-            eepg = EEPoseGoals()
-            for arm in self.arm_order:
-                eepg.ee_poses.append(posegoal[arm].pose.ros_pose)
-            eeposegoals.append(eepg)
-        return eeposegoals
-
-    def __getitem__(self,index):
-        return {arm:self.arm_trajectories[arm][index] for arm in self.arm_order}
+            xs = self.x
+            ys = self.y
+            zs = self.z
+            tp = [times[-2]-times[-1]]+t+[times[1]+times[-1]]
+            xp = [xs[-2]-xs[-1]]+xs+[xs[1]+xs[-1]]
+            yp = [ys[-2]-ys[-1]]+ys+[ys[1]+ys[-1]]
+            zp = [zs[-2]-zs[-1]]+zs+[zs[1]+zs[-1]]
+            self.xfn = interpolate.UnivariateSpline(tp,xp,ext='const')
+            self.yfn = interpolate.UnivariateSpline(tp,yp,ext='const')
+            self.zfn = interpolate.UnivariateSpline(tp,zp,ext='const')
