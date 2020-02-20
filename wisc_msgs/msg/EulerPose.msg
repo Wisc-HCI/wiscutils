@@ -1,2 +1,2 @@
-geometry_msgs/Vector3 position
+geometry_msgs/Point position
 wisc_msgs/Euler orientation

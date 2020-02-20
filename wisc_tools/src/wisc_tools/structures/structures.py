@@ -6,6 +6,7 @@ from wisc_tools.convenience import pairwise
 from wisc_tools.conversions import transformations
 from wisc_msgs.msg import Euler, EulerPose, EEPoseGoals
 from geometry_msgs.msg import Vector3 as rosVector3
+from geometry_msgs.msg import Point as rosPoint
 from geometry_msgs.msg import Quaternion as rosQuaternion
 from geometry_msgs.msg import Pose as rosPose
 from abc import ABC, abstractmethod
@@ -45,6 +46,10 @@ class Position(object):
         return rosVector3(x=self.x,y=self.y,z=self.z)
 
     @property
+    def ros_point(self):
+        return rosPoint(x=self.x,y=self.y,z=self.z)
+
+    @property
     def array(self):
         return np.array([self.x,self.y,self.z])
 
@@ -55,6 +60,10 @@ class Position(object):
     @classmethod
     def from_ros_vector3(cls,vector3):
         return Position(x=vector3.x,y=vector3.y,z=vector3.z)
+
+    @classmethod
+    def from_ros_point(cls,point):
+        return Position(x=point.x,y=point.y,z=point.z)
 
     def distance_to(self,other):
         return math.sqrt(math.pow(self.x-other.x,2)+math.pow(self.y-other.y,2)+math.pow(self.z-other.z,2))
@@ -70,12 +79,12 @@ class Quaternion(pyQuaternion):
 
     @property
     def ros_euler(self):
-        (r,p,y) = transformations.euler_from_quaternion([self.w,self.x,self.y,self.z],'szyx')
+        (r,p,y) = transformations.euler_from_quaternion([self.w,self.x,self.y,self.z],'szxy')
         return Euler(r=r,p=p,y=y)
 
     @property
     def dict(self):
-        (r,p,y) = transformations.euler_from_quaternion([self.w,self.x,self.y,self.z],'szyx')
+        (r,p,y) = transformations.euler_from_quaternion([self.w,self.x,self.y,self.z],'szxy')
         return {'r':r,'p':p,'y':y}
 
     @classmethod
@@ -92,12 +101,12 @@ class Quaternion(pyQuaternion):
 
     @classmethod
     def from_ros_euler(self,euler):
-        tf_quat = transformations.quaternion_from_euler(euler.r,euler.p,euler.y,'szyx')
+        tf_quat = transformations.quaternion_from_euler(euler.r,euler.p,euler.y,'szxy')
         return Quaternion.from_vector_quaternion(tf_quat)
 
     @classmethod
     def from_euler_dict(self,dict):
-        tf_quat = transformations.quaternion_from_euler(dict['r'],dict['p'],dict['y'])
+        tf_quat = transformations.quaternion_from_euler(dict['r'],dict['p'],dict['y'],'szxy')
         return Quaternion.from_vector_quaternion(tf_quat)
 
     def distance_to(self,other):
@@ -110,11 +119,11 @@ class Pose(object):
 
     @property
     def ros_pose(self):
-        return rosPose(position=self.position.ros_vector3,orientation=self.quaternion.ros_quaternion)
+        return rosPose(position=self.position.ros_point,orientation=self.quaternion.ros_quaternion)
 
     @property
     def ros_eulerpose(self):
-        return EulerPose(position=self.position.ros_vector3,orientation=self.orientation.ros_euler)
+        return EulerPose(position=self.position.ros_point,orientation=self.orientation.ros_euler)
 
     @classmethod
     def from_ros_eulerpose(self,eulerpose):
@@ -134,7 +143,7 @@ class Pose(object):
 
     @classmethod
     def from_ros_pose(self,pose):
-        return Pose(position=Position.from_ros_vector3(pose.position),orientation=Quaternion.from_ros_quaternion(pose.orientation))
+        return Pose(position=Position.from_ros_point(pose.position),orientation=Quaternion.from_ros_quaternion(pose.orientation))
 
     @property
     def dict(self):
