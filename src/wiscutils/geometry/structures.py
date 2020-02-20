@@ -3,6 +3,7 @@ from scipy import interpolate
 from pyquaternion import Quaternion as pyQuaternion
 from util import pairwise
 from geometry_msgs.msg import Vector3 as rosVector3
+from geometry_msgs.msg import Point as rosPoint
 from geometry_msgs.msg import Quaternion as rosQuaternion
 from geometry_msgs.msg import Pose as rosPose
 from wiscutils.msg import EulerPose, EEPoseGoals
@@ -43,6 +44,10 @@ class Position(object):
     @property
     def ros_vector3(self):
         return rosVector3(x=self.x,y=self.y,z=self.z)
+    
+    @property
+    def ros_point(self):
+        return rosPoint(x=self.x,y=self.y,z=self.z)
 
     @property
     def array(self):
@@ -55,6 +60,10 @@ class Position(object):
     @classmethod
     def from_ros_vector3(cls,vector3):
         return Position(x=vector3.x,y=vector3.y,z=vector3.z)
+    
+    @classmethod
+    def from_ros_point(cls,point):
+        return Position(x=point.x,y=point.y,z=point.z)
 
     def distance_to(self,other):
         return math.sqrt(math.pow(self.x-other.x,2)+math.pow(self.y-other.y,2)+math.pow(self.z-other.z,2))
@@ -110,11 +119,11 @@ class Pose(object):
 
     @property
     def ros_pose(self):
-        return rosPose(position=self.position.ros_vector3,orientation=self.quaternion.ros_quaternion)
+        return rosPose(position=self.position.ros_point,orientation=self.quaternion.ros_quaternion)
 
     @property
     def ros_eulerpose(self):
-        return EulerPose(position=self.position.ros_vector3,orientation=self.orientation.ros_euler)
+        return EulerPose(position=self.position.ros_point,orientation=self.orientation.ros_euler)
 
     @classmethod
     def from_ros_eulerpose(self,eulerpose):
@@ -134,7 +143,7 @@ class Pose(object):
 
     @classmethod
     def from_ros_pose(self,pose):
-        return Pose(position=Position.from_ros_vector3(pose.position),orientation=Quaternion.from_ros_quaternion(pose.orientation))
+        return Pose(position=Position.from_ros_point(pose.position),orientation=Quaternion.from_ros_quaternion(pose.orientation))
 
     @property
     def dict(self):
