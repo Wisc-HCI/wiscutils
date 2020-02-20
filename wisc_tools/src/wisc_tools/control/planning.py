@@ -192,7 +192,7 @@ class EventController(Sequence):
         [event.delete_mode(mode) for event in self.events if event >= time and event.has_mode(mode,False)]
         self.events = [event for event in self.events if not event.empty]
 
-    def delete_all_poses_with_group_id(self,group_id:int):
+    def delete_all_poses_with_group_id(self,group_id:int,current_time:float):
         # self.events = [event for event in self.events if not event.group_id == group_id]
         print('deleting all poses with group_id: {}'.format(group_id))
         updated_arms = []
@@ -217,7 +217,7 @@ class EventController(Sequence):
             event = self.get_event_at_time(time)
 
             if(event.poses.get(arm, None) is not None):
-                self.delete_all_poses_with_group_id(event.poses[arm]['group_id'])
+                self.delete_all_poses_with_group_id(event.poses[arm]['group_id'], current_time)
                 event = self.get_event_at_time(time)
                 if event is None:
                     event = Event(time)

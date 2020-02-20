@@ -101,19 +101,27 @@ class StateController(object):
         print('Setting action: {0}'.format(action))
         # Get the time to do the first action, and then specify the offsets based on that
         now = self.now
-        ttp = self.time_to_pose(action,None)
 
         for arm in self.actions[action].keys():
+            current_pose = self.event_controller.arm_trajectories[arm][now]
+            goal_pose = self.poses[arm][self.actions[action][arm][0]['pose']]['pose']
+            ttp = self.time_to_pose(current_pose,goal_pose)
             last = None
             for event in self.actions[action][arm]:
                 if last is None:
-                    self.event_controller.add_pose_at_time(self.now, ttp, arm, event['pose'], self.next_group_id)
+                    self.event_controller.add_pose_at_time(self.now, now + ttp, arm, self.poses[arm][event['pose']]['pose'], self.next_group_id)
+                    for e in event:
+                        if e in self.modes:
+                            self.event_controller.add_mode_at_time(self.now, now + ttp, e, self.modes[e]['values'][event[e]], False, self.next_group_id)
                 else:
-                    self.event_controller.add_pose_at_time(self.now, ttp + last['time'], arm, event['pose'], self.next_group_id)
+                    self.event_controller.add_pose_at_time(self.now, now + ttp + last['time'], arm, self.poses[arm][event['pose']]['pose'], self.next_group_id)
+                    for e in event:
+                        if e in self.modes:
+                            self.event_controller.add_mode_at_time(self.now, now + ttp + last['time'], e, self.modes[e]['values'][event[e]], False, self.next_group_id)
                 last = event
         self.next_group_id += 1
         self.timestep()
-        #[print({'time': event.time, 'poses': event.poses}) for event in self.event_controller.events]
+        [print({'time': event.time, 'poses': event.poses}) for event in self.event_controller.events]
 
     def set_pose(self,arm,pose,offset=None):
         # Estimate the amount of time needed to get to that pose
@@ -196,9 +204,10 @@ class StateController(object):
 
     @staticmethod
     def time_to_pose(current_pose,goal_pose):
-        spatial_dist, rotational_dist = current_pose.distance_to(goal_pose)
-        print(spatial_dist,rotational_dist)
-        return max([spatial_dist*20,rotational_dist*5])
+        return 3;
+        # spatial_dist, rotational_dist = current_pose.distance_to(goal_pose)
+        # print(spatial_dist,rotational_dist)
+        # return max([spatial_dist*20,rotational_dist*5])
 
     @staticmethod
     def time_to_mode(current_mode,mode_goal):
