@@ -70,12 +70,12 @@ class Quaternion(pyQuaternion):
 
     @property
     def ros_euler(self):
-        (r,p,y) = transformations.euler_from_quaternion([self.w,self.x,self.y,self.z],'szyx')
+        (r,p,y) = transformations.euler_from_quaternion([self.x,self.y,self.z,self.w],'szxy')
         return Euler(r=r,p=p,y=y)
 
     @property
     def dict(self):
-        (r,p,y) = transformations.euler_from_quaternion([self.w,self.x,self.y,self.z],'szyx')
+        (r,p,y) = transformations.euler_from_quaternion([self.x,self.y,self.z,self.w],'szxy')
         return {'r':r,'p':p,'y':y}
 
     @classmethod
@@ -92,12 +92,12 @@ class Quaternion(pyQuaternion):
 
     @classmethod
     def from_ros_euler(self,euler):
-        tf_quat = transformations.quaternion_from_euler(euler.r,euler.p,euler.y,'szyx')
+        tf_quat = transformations.quaternion_from_euler(euler.r,euler.p,euler.y,'szxy')
         return Quaternion.from_vector_quaternion(tf_quat)
 
     @classmethod
     def from_euler_dict(self,dict):
-        tf_quat = transformations.quaternion_from_euler(dict['r'],dict['p'],dict['y'])
+        tf_quat = transformations.quaternion_from_euler(dict['r'],dict['p'],dict['y'],'szxy')
         return Quaternion.from_vector_quaternion(tf_quat)
 
     def distance_to(self,other):
