@@ -1,6 +1,6 @@
 from wisc_tools.structures import Mode, Position, Quaternion, Pose, ModeTrajectory, PoseTrajectory, AnnotationTrajectory
 from wisc_tools.control import EventController
-from rclpy.duration import Duration
+import rospy
 import math
 import numpy as np
 
@@ -28,7 +28,7 @@ class StateController(object):
 
     @property
     def now(self):
-        return float(self.rosnode.get_clock().now().nanoseconds) * 10**-9
+        return float(rospy.get_time().nanoseconds) * 10**-9
 
     @property
     def current_serializable(self):
