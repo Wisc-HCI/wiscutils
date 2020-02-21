@@ -53,6 +53,7 @@ add_message_files(
   FILES
   DCPoseGoals.msg
   EEPoseGoals.msg
+  Euler.msg
   EulerPose.msg
   JointAngles.msg
 )

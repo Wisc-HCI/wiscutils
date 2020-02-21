@@ -1,3 +1,4 @@
+from __future__ import print_function
 from wisc_tools.structures import Mode, Position, Quaternion, Pose, ModeTrajectory, PoseTrajectory, AnnotationTrajectory
 from wisc_tools.control import EventController
 import rospy
@@ -28,7 +29,7 @@ class StateController(object):
 
     @property
     def now(self):
-        return float(rospy.get_time().nanoseconds) * 10**-9
+        return rospy.get_time()
 
     @property
     def current_serializable(self):

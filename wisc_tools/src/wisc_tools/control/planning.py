@@ -1,5 +1,5 @@
 from wisc_tools.structures import Mode, Position, Quaternion, Pose, ModeTrajectory, PoseTrajectory, AnnotationTrajectory
-from collections.abc import Sequence
+# from collections.abc import Sequence
 
 class Event(object):
     '''
@@ -112,7 +112,7 @@ class Event(object):
     def delete_mode(self,mode):
         del self.modes[mode]
 
-class EventController(Sequence):
+class EventController(object):
     '''
     EventController Class.
     Contains a series of events with useful ways of accessing them
