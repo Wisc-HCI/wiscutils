@@ -1,14 +1,14 @@
 import numpy as np
+import math
 from scipy import interpolate
 from pyquaternion import Quaternion as pyQuaternion
-from util import pairwise
+from wisc_tools.convenience import pairwise
+from wisc_tools.conversions import transformations
+from wisc_msgs.msg import Euler, EulerPose, EEPoseGoals
 from geometry_msgs.msg import Vector3 as rosVector3
 from geometry_msgs.msg import Point as rosPoint
 from geometry_msgs.msg import Quaternion as rosQuaternion
 from geometry_msgs.msg import Pose as rosPose
-from wiscutils.msg import EulerPose, EEPoseGoals
-from wiscutils.convenience import pairwise
-from wiscutils.conversions import transformations
 from abc import ABCMeta, abstractmethod
 
 class Mode(object):
@@ -44,7 +44,7 @@ class Position(object):
     @property
     def ros_vector3(self):
         return rosVector3(x=self.x,y=self.y,z=self.z)
-    
+
     @property
     def ros_point(self):
         return rosPoint(x=self.x,y=self.y,z=self.z)
@@ -60,7 +60,7 @@ class Position(object):
     @classmethod
     def from_ros_vector3(cls,vector3):
         return Position(x=vector3.x,y=vector3.y,z=vector3.z)
-    
+
     @classmethod
     def from_ros_point(cls,point):
         return Position(x=point.x,y=point.y,z=point.z)
@@ -79,12 +79,12 @@ class Quaternion(pyQuaternion):
 
     @property
     def ros_euler(self):
-        (r,p,y) = transformations.euler_from_quaternion([self.x,self.y,self.z,self.w],'szxy')
+        (r,p,y) = transformations.euler_from_quaternion([self.w,self.x,self.y,self.z],'szxy')
         return Euler(r=r,p=p,y=y)
 
     @property
     def dict(self):
-        (r,p,y) = transformations.euler_from_quaternion([self.x,self.y,self.z,self.w],'szxy')
+        (r,p,y) = transformations.euler_from_quaternion([self.w,self.x,self.y,self.z],'szxy')
         return {'r':r,'p':p,'y':y}
 
     @classmethod

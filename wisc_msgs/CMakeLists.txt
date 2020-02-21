@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(wiscutils)
+project(wisc_msgs)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -21,7 +21,7 @@ find_package(catkin REQUIRED COMPONENTS std_msgs message_generation geometry_msg
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
 ## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
-catkin_python_setup()
+## catkin_python_setup()
 
 ################################################
 ## Declare ROS messages, services and actions ##
@@ -49,6 +49,7 @@ catkin_python_setup()
 
 ## Generate messages in the 'msg' folder
 add_message_files(
+  DIRECTORY msg
   FILES
   DCPoseGoals.msg
   EEPoseGoals.msg
@@ -73,7 +74,7 @@ add_message_files(
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
    DEPENDENCIES
-   geometry_msgs  # Or other packages containing msgs
+   geometry_msgs
    std_msgs
 )
 
