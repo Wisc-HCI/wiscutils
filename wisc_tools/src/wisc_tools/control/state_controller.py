@@ -7,7 +7,7 @@ import numpy as np
 
 def serialize(input):
     if isinstance(input, dict):
-        return {key:serialize(value) for key,value in input.items()}
+        return {key:serialize(value) for key,value in input.iteritems()}
     elif isinstance(input, list):
         return [serialize(element) for element in input]
     elif isinstance(input, Pose):
@@ -38,8 +38,8 @@ class StateController(object):
     @property
     def future(self):
         return {
-            'armData':[self.pose_future(arm,trajectory) for (arm, trajectory) in self.event_controller.arm_trajectories.items()],
-            'modeData':[self.mode_future(mode,trajectory) for (mode, trajectory) in self.event_controller.mode_trajectories.items()],
+            'armData':[self.pose_future(arm,trajectory) for (arm, trajectory) in self.event_controller.arm_trajectories.iteritems()],
+            'modeData':[self.mode_future(mode,trajectory) for (mode, trajectory) in self.event_controller.mode_trajectories.iteritems()],
         }
 
     def new(self, arms, joints, modes, actions, poses, annotations):
@@ -51,9 +51,16 @@ class StateController(object):
         self.actions = actions
         self.annotations = annotations
         self.poses = {}
-        for arm, pose in poses.items():
-            self.poses[arm] = {pose_name:{'pose':Pose.from_eulerpose_dict(pose_info),'default':pose_info['default']} for (pose_name,pose_info) in pose.items()}
-        self.event_controller = EventController({arm:[info['pose'] for pose,info in poses.items() if info['default']][0] for arm,poses in self.poses.items()},
+        for arm, pose in poses.iteritems():
+            self.poses[arm] = {pose_name:{'pose':Pose.from_eulerpose_dict(pose_info),'default':pose_info['default']} for (pose_name,pose_info) in pose.iteritems()}
+        default_poses = []
+        for arm in self.arms:
+            for pose,poseinfo in self.poses[arm].iteritems():
+                if poseinfo['default']:
+                    default_poses.append(poseinfo['pose'].ros_pose)
+        print(default_poses)
+
+        self.event_controller = EventController({arm:[info['pose'] for pose,info in poses.iteritems() if info['default']][0] for arm,poses in self.poses.iteritems()},
                                                 self.annotations,
                                                 self.modes)
         self.initialize()
@@ -190,16 +197,22 @@ class StateController(object):
         annotations = self.event_controller.timestep_to(time)
         self.current["annotations"] = annotations
         for arm in self.arms:
-            self.current['arms'][arm] = self.event_controller.arm_trajectories[arm][time]
+            try:
+                self.current['arms'][arm] = self.event_controller.arm_trajectories[arm][time]
+            except:
+                print("could not find arm "+arm)
         for mode in self.modes.keys():
-            current = self.event_controller.mode_trajectories[mode][time]
-            name = None
-            for value_name,value in self.modes[mode]['values'].items():
-                if value == current:
-                    name = value_name
-            self.current['modes'][mode] = {'override':self.event_controller.mode_overrides[mode],
-                                           'name':name,
-                                           'value':self.event_controller.mode_trajectories[mode][time]}
+            try:
+                current = self.event_controller.mode_trajectories[mode][time]
+                name = None
+                for value_name,value in self.modes[mode]['values'].iteritems():
+                    if value == current:
+                        name = value_name
+                self.current['modes'][mode] = {'override':self.event_controller.mode_overrides[mode],
+                                               'name':name,
+                                               'value':self.event_controller.mode_trajectories[mode][time]}
+            except:
+                print("could not find mode "+mode)
 
         return serialize(self.current)
 

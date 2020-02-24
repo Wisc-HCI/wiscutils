@@ -9,7 +9,7 @@ from geometry_msgs.msg import Vector3 as rosVector3
 from geometry_msgs.msg import Point as rosPoint
 from geometry_msgs.msg import Quaternion as rosQuaternion
 from geometry_msgs.msg import Pose as rosPose
-from abc import ABCMeta, abstractmethod
+from abc import abstractmethod
 
 class Mode(object):
     '''
@@ -155,7 +155,7 @@ class Pose(object):
     def __repr__(self):
         return '({0}, {1})'.format(self.position,self.quaternion)
 
-class Trajectory(ABCMeta):
+class Trajectory(object):
 
     def __init__(self,waypoints,kind='cubic',circuit=False,min_value=None,max_value=None):
         self.wps = waypoints
