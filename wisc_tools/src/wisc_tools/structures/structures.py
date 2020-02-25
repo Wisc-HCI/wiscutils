@@ -157,7 +157,7 @@ class Pose(object):
 
 class Trajectory(object):
 
-    def __init__(self,waypoints,kind='cubic',circuit=False,min_value=None,max_value=None):
+    def __init__(self,waypoints,kind='slinear',circuit=False,min_value=None,max_value=None):
         self.wps = waypoints
         self.kind = kind
         self.circuit = circuit
@@ -201,8 +201,8 @@ class Trajectory(object):
 
 class ModeTrajectory(Trajectory):
 
-    def __init__(self,waypoints,fill='interpolate',kind='cubic',circuit=False,min_value=None,max_value=None):
-        super(ModeTrajectory,self).__init__(waypoints,kind='cubic',circuit=False,min_value=None,max_value=None)
+    def __init__(self,waypoints,fill='interpolate',kind='slinear',circuit=False,min_value=None,max_value=None):
+        super(ModeTrajectory,self).__init__(waypoints,kind='slinear',circuit=False,min_value=None,max_value=None)
 
     @property
     def v(self):
@@ -229,13 +229,13 @@ class ModeTrajectory(Trajectory):
         t = self.t
         v = self.v
         if not self.circuit:
-            #self.vfn = interpolate.interp1d(t,v,kind=self.kind,fill_value='extrapolate')
-            self.vfn = interpolate.UnivariateSpline(t,v,ext='const')
+            self.vfn = interpolate.interp1d(t,v,kind=self.kind,fill_value='extrapolate')
+            #self.vfn = interpolate.UnivariateSpline(t,v,ext='const')
         else:
             tp = [t[-2]-t[-1]]+t+[t[1]+t[-1]]
             vp = [v[-2]-v[-1]]+v+[v[1]+v[-1]]
-            self.vfn = interpolate.UnivariateSpline(t,v,ext='const')
-            #self.vfn = interpolate.interp1d(tp,vp,kind=self.kind,fill_value='extrapolate')
+            #self.vfn = interpolate.UnivariateSpline(t,v,ext='const')
+            self.vfn = interpolate.interp1d(tp,vp,kind=self.kind,fill_value='extrapolate')
 
 class AnnotationTrajectory(Trajectory):
 
@@ -313,13 +313,13 @@ class PoseTrajectory(Trajectory):
         assert len(self.wps) > 0
         times = self.t
         if not self.circuit:
-            # self.xfn = interpolate.interp1d(times,self.x,kind=self.kind,fill_value='extrapolate')
-            # self.yfn = interpolate.interp1d(times,self.y,kind=self.kind,fill_value='extrapolate')
-            # self.zfn = interpolate.interp1d(times,self.z,kind=self.kind,fill_value='extrapolate')
+            self.xfn = interpolate.interp1d(times,self.x,kind=self.kind,fill_value='extrapolate')
+            self.yfn = interpolate.interp1d(times,self.y,kind=self.kind,fill_value='extrapolate')
+            self.zfn = interpolate.interp1d(times,self.z,kind=self.kind,fill_value='extrapolate')
             # TODO: Test whether the code below produces better results
-            self.xfn = interpolate.UnivariateSpline(times,self.x,ext='const')
-            self.yfn = interpolate.UnivariateSpline(times,self.y,ext='const')
-            self.zfn = interpolate.UnivariateSpline(times,self.z,ext='const')
+            # self.xfn = interpolate.UnivariateSpline(times,self.x,ext='const')
+            # self.yfn = interpolate.UnivariateSpline(times,self.y,ext='const')
+            # self.zfn = interpolate.UnivariateSpline(times,self.z,ext='const')
         else:
             xs = self.x
             ys = self.y
@@ -328,6 +328,10 @@ class PoseTrajectory(Trajectory):
             xp = [xs[-2]-xs[-1]]+xs+[xs[1]+xs[-1]]
             yp = [ys[-2]-ys[-1]]+ys+[ys[1]+ys[-1]]
             zp = [zs[-2]-zs[-1]]+zs+[zs[1]+zs[-1]]
-            self.xfn = interpolate.UnivariateSpline(tp,xp,ext='const')
-            self.yfn = interpolate.UnivariateSpline(tp,yp,ext='const')
-            self.zfn = interpolate.UnivariateSpline(tp,zp,ext='const')
+            self.xfn = interpolate.interp1d(tp,xp,kind=self.kind,fill_value='extrapolate')
+            self.yfn = interpolate.interp1d(tp,yp,kind=self.kind,fill_value='extrapolate')
+            self.zfn = interpolate.interp1d(tp,zp,kind=self.kind,fill_value='extrapolate')
+
+            # self.xfn = interpolate.UnivariateSpline(tp,xp,ext='const')
+            # self.yfn = interpolate.UnivariateSpline(tp,yp,ext='const')
+            # self.zfn = interpolate.UnivariateSpline(tp,zp,ext='const')

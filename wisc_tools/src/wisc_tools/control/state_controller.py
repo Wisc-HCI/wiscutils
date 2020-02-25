@@ -109,11 +109,18 @@ class StateController(object):
         print('Setting action: {0}'.format(action))
         # Get the time to do the first action, and then specify the offsets based on that
         now = self.now
+        times = []
+        for arm in self.actions[action].keys():
+            current_pose = self.event_controller.arm_trajectories[arm][now]
+            goal_pose = self.poses[arm][self.actions[action][arm][0]['pose']]['pose']
+            times.append(self.time_to_pose(current_pose,goal_pose))
+
+        # Offset is the max time estimate across arms
+        ttp = max(times)
 
         for arm in self.actions[action].keys():
             current_pose = self.event_controller.arm_trajectories[arm][now]
             goal_pose = self.poses[arm][self.actions[action][arm][0]['pose']]['pose']
-            ttp = self.time_to_pose(current_pose,goal_pose)
             last = None
             for event in self.actions[action][arm]:
                 if last is None:
@@ -218,12 +225,14 @@ class StateController(object):
 
     @staticmethod
     def time_to_pose(current_pose,goal_pose):
-        return 3;
-        # spatial_dist, rotational_dist = current_pose.distance_to(goal_pose)
-        # print(spatial_dist,rotational_dist)
-        # return max([spatial_dist*20,rotational_dist*5])
+        # return 3;
+        spatial_dist, rotational_dist = current_pose.distance_to(goal_pose)
+        #print(spatial_dist,rotational_dist)
+        t = max([spatial_dist*5,rotational_dist*2])
+        #print(t)
+        return t
 
     @staticmethod
     def time_to_mode(current_mode,mode_goal):
         # Hard coded for the time being.
-        return math.fabs(current_mode-mode_goal)*20
+        return math.fabs(current_mode-mode_goal)*10
