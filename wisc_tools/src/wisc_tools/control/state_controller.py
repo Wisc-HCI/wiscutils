@@ -179,6 +179,11 @@ class StateController(object):
             self.event_controller.set_mode_override(current_time,mode,False)
         self.timestep()
 
+    def set_annotation(self,annotation,data):
+        print('setting annotation {} with {}'.format(annotation, data))
+        self.event_controller.add_annotation_at_time(self.now, self.now, annotation, data, self.next_group_id)
+        self.next_group_id += 1
+
     def initialize(self):
         initial = {'actions':[],'modes':{},'arms':{},'annotations':{},'poses':{}}
         for arm in self.arms:

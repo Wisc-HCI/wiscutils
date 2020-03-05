@@ -10,6 +10,7 @@ from geometry_msgs.msg import Point as rosPoint
 from geometry_msgs.msg import Quaternion as rosQuaternion
 from geometry_msgs.msg import Pose as rosPose
 from abc import abstractmethod
+import json
 
 class Mode(object):
     '''
@@ -197,7 +198,7 @@ class Trajectory(object):
         pass
 
     def __repr__(self):
-        return '[{0}]'.format(','.join(self.wps))
+        return json.dumps(self.wps)
 
 class ModeTrajectory(Trajectory):
 
