@@ -120,7 +120,7 @@ class EventController(object):
     def __init__(self,arm_info={},annotation_info={},mode_info={}):
         self.events = []
         self.arm_trajectories = {arm:PoseTrajectory([{'time':0,'pose':pose}]) for arm,pose in arm_info.iteritems()}
-        self.annotation_trajectories = {annotation:AnnotationTrajectory([]) for annotation in annotation_info.keys()}
+        self.annotation_trajectories = {annotation:AnnotationTrajectory([{'time':0,'annotation':annotation}]) for annotation in annotation_info.keys()}
         self.mode_trajectories = {mode:ModeTrajectory([{'time':0,'mode':info['values'][info['value']]}]) for mode,info in mode_info.iteritems()}
         self.mode_overrides = {mode:info['override'] for mode,info in mode_info.iteritems()}
         self.mode_thresholds = {mode:(min([value for key,value in info['values'].iteritems()]),
