@@ -151,13 +151,11 @@ class EventController(object):
         self.arm_trajectories[arm] = PoseTrajectory(current+future)
 
     def refresh_annotation_trajectory(self,current_time,annotation):
-        print(self.annotation_trajectories[annotation])
         current = [{'time':current_time,'annotation':self.annotation_trajectories[annotation][current_time]}]
         future = [{'time':event.time,'annotation':event.get_annotation(annotation)} for event in self.events if event.has_annotation(annotation) and event.time > current_time]
         self.annotation_trajectories[annotation] = AnnotationTrajectory(current+future)
 
     def refresh_mode_trajectory(self,current_time,mode):
-        print(self.mode_trajectories[mode])
         current = [{'time':current_time,'mode':self.mode_trajectories[mode][current_time]}]
         if self.mode_overrides[mode]:
             future = [{'time':event.time,'mode':event.get_mode(mode).override_value} for event in self.events if event.has_mode(mode,True) and event.time > current_time]
