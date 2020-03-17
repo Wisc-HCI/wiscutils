@@ -125,14 +125,16 @@ class StateController(object):
             for event in self.actions[action][arm]:
                 if last is None:
                     self.event_controller.add_pose_at_time(self.now, now + ttp, arm, self.poses[arm][event['pose']]['pose'], self.next_group_id)
-                    for e in event:
-                        if e in self.modes:
-                            self.event_controller.add_mode_at_time(self.now, now + ttp, e, self.modes[e]['values'][event[e]], False, self.next_group_id)
+                    for e in event['modes']:
+                        self.event_controller.add_mode_at_time(self.now, now + ttp, e, self.modes[e]['values'][event['modes'][e]], False, self.next_group_id)
+                    for e in event['annotations']:
+                        self.event_controller.add_annotation_at_time(self.now, now + ttp, e, event['annotations'][e], self.next_group_id)
                 else:
                     self.event_controller.add_pose_at_time(self.now, now + ttp + last['time'], arm, self.poses[arm][event['pose']]['pose'], self.next_group_id)
-                    for e in event:
-                        if e in self.modes:
-                            self.event_controller.add_mode_at_time(self.now, now + ttp + last['time'], e, self.modes[e]['values'][event[e]], False, self.next_group_id)
+                    for e in event['modes']:
+                        self.event_controller.add_mode_at_time(self.now, now + ttp + last['time'], e, self.modes[e]['values'][event['modes'][e]], False, self.next_group_id)
+                    for e in event['annotations']:
+                        self.event_controller.add_annotation_at_time(self.now, now + ttp, e, event['annotations'][e], self.next_group_id)
                 last = event
         self.next_group_id += 1
         self.timestep()
@@ -235,9 +237,9 @@ class StateController(object):
         #print(spatial_dist,rotational_dist)
         t = max([spatial_dist*5,rotational_dist*2])
         #print(t)
-        return t
+        return t + 0.5
 
     @staticmethod
     def time_to_mode(current_mode,mode_goal):
         # Hard coded for the time being.
-        return math.fabs(current_mode-mode_goal)*10
+        return math.fabs(current_mode-mode_goal)*10 + 0.5
