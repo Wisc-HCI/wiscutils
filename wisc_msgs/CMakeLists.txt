@@ -56,6 +56,7 @@ add_message_files(
   Euler.msg
   EulerPose.msg
   JointAngles.msg
+  DebugPoseAngles.msg
 )
 
 ## Generate services in the 'srv' folder
