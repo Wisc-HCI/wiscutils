@@ -1,5 +1,5 @@
 std_msgs/Header header
-wisc_msgs/EEPoseGoals ee_poses
-wisc_msgs/DCPoseGoals dc_values
-std_msgs/Float64MultiArray angles_lively
-std_msgs/Float64MultiArray angles_relaxed
+geometry_msgs/Pose[] ee_poses
+float64[] dc_values
+float64[] angles_lively
+float64[] angles_relaxed
