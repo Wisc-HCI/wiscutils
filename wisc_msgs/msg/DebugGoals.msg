@@ -4,5 +4,5 @@ float32[] dc_values
 float32[] lively_weights
 float32[] normal_weights
 geometry_msgs/Point bias
-bool continuous
 string eval_type
+int32 i
