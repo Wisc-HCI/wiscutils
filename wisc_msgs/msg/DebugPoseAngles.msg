@@ -4,5 +4,9 @@ geometry_msgs/Pose[] ideal_noise
 float64[] dc_values
 float64[] angles_lively
 float64[] angles_relaxed
+float64[] angles_perlin
+bool collision_relaxed
+bool collision_lively
+bool collision_perlin
 string eval_type
-int32 i
+int64 i

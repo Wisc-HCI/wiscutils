@@ -1,8 +1,8 @@
 std_msgs/Header header
 geometry_msgs/Pose[] ee_poses
-float32[] dc_values
-float32[] lively_weights
-float32[] normal_weights
+float64[] dc_values
+float64[] lively_weights
+float64[] normal_weights
 geometry_msgs/Point bias
 string eval_type
-int32 i
+int64 i
