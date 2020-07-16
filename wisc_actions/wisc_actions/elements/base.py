@@ -1,11 +1,18 @@
+from abc import ABC, abstractmethod
 
-class WiscBase(object):
+class WiscBase(ABC):
 
     keys = [set()] # Empty Set
 
     @property
+    @abstractmethod
     def serialized(self):
         return {}
+
+    @classmethod
+    @abstractmethod
+    def load(cls,serialized):
+        return WiscBase()
 
     @classmethod
     def serialize(cls,item):

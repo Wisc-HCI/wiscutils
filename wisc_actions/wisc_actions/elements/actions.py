@@ -1,7 +1,10 @@
 from bson.objectid import ObjectId
 from .base import WiscBase
+from .parse import parse
 from .properties import Property
+from .calls import Call
 from .definitions import LiteralDefinition, PropertyDefinition, IndexDefinition
+from .conditions import Condition
 
 class Primitive(WiscBase):
     '''
@@ -51,18 +54,29 @@ class Action(Primitive):
 
     @classmethod
     def load(self,serialized):
+        id = serialized['_id'] if '_id' in serialized.keys() else None
         name = serialized['name']
         parameters = serialized['parameters']
         subactions = []
-        # Todo: finish loading all these attributes.
+        definitions = []
+        preconditions = []
+        postconditions = []
         for serial_subaction in serialized['subactions']:
-            pass
+            subactions.append(Call.load(serial_subaction))
         for serial_definition in serialized['definitions']:
-            pass
+            definitions.append(parse([LiteralDefinition, PropertyDefinition, IndexDefinition],serial_definition))
         for serial_precondition in serialized['preconditions']:
-            pass
+            preconditions.append(Condition.load(serial_precondition))
         for serial_postcondition in serialized['postconditions']:
-            pass
+            postconditions.append(Condition.load(serial_postcondition))
+        return Action(_id=id,
+                      name=name,
+                      parameters=parameters,
+                      subactions=subactions,
+                      definitions=definitions,
+                      preconditions=preconditions,
+                      postconditions=postconditions)
+
 
 
     @property
@@ -76,6 +90,10 @@ class Action(Primitive):
 
     @property
     def inferred_preconditions(self):
+        '''
+        Returns the set of preconditions inferred from the subactions
+        '''
+        # TODO
         preconditions = []
         for subaction in self.subactions:
             if isinstance(subaction,Action):
@@ -84,17 +102,30 @@ class Action(Primitive):
 
     @property
     def inferred_postconditions(self):
+        '''
+        Returns the set of postconditions inferred from the subactions
+        '''
+        # TODO
         return []
 
     @property
     def preconditions(self):
+        '''
+        The complete set of preconditions for this action
+        '''
         return self.inferred_preconditions + self.additional_preconditions
 
     @property
     def postconditions(self):
+        '''
+        The complete set of postconditions for this action
+        '''
         return self.inferred_postconditions + self.additional_postconditions
 
     def get_namespace(self,state,parameters):
+        '''
+        Obtain all items in the namespace of the action.
+        '''
         namespace = {}
         # First, get the parameters specified as arguments
         for parameter in self.parameters:
