@@ -41,7 +41,7 @@ class Condition(WiscBase):
 
     def evaluate(self,state):
         '''
-        Search in the state for the thing,
+        Check to see if hte condition is satisfied.
         '''
         return False
 

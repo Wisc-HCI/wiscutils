@@ -17,3 +17,5 @@ class Call(WiscBase):
 
     @classmethod
     def load(cls,serialized)
+        # TODO
+        pass

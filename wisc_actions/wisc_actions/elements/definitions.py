@@ -15,10 +15,10 @@ class Definition(WiscBase):
     def serialized(self):
         return {'name':self.name}
 
-    def get(self,namespace):
+    def get(self,namespace): # State?
         pass
 
-    def set(self,namespaace,value):
+    def set(self,namespace,value): # State?
         pass
 
 class LiteralDefinition(WiscBase):
@@ -28,7 +28,7 @@ class LiteralDefinition(WiscBase):
         y = 2
     '''
 
-    keys = [('name','value')]
+    keys = [set(('name','value'))]
 
     def __init__(self,name,value):
         super(LiteralDefinition,self).__init__(name)
@@ -49,9 +49,11 @@ class PropertyDefinition(WiscBase):
     Specification for defining a value via a thing's property in the namespace of an action.
     This is essentially equivalent to:
         is_num = isinstance(2,Int)
+    Or:
+        position = pose.position
     '''
 
-    keys = [('name','item','property')]
+    keys = [set(('name','item','property'))]
 
     def __init__(self,name,item,property,fallback=None):
         super(PropertyDefinition,self).__init__(name)
@@ -74,7 +76,7 @@ class IndexDefinition(WiscBase):
         pose = trajectory[2]
     '''
 
-    keys = [('name','item','index')]
+    keys = [set(('name','item','index'))]
 
     def __init__(self,name,item,index,fallback):
         super(PropertyDefinition,self).__init__(name)

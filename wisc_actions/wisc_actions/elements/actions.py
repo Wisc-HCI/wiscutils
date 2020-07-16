@@ -11,7 +11,7 @@ class Primitive(WiscBase):
     Encoding for Primitive Actions. All higher-level management is handled by enclosing actions.
     '''
 
-    keys = [set(['_id','parameters'])]
+    keys = [set(['_id','name','parameters'])]
 
     def __init__(self, name, parameters, _id=None):
         self.id = ObjectId(_id)
@@ -159,5 +159,5 @@ class Action(Primitive):
 
     def check(self,state,parameters):
         '''
-        Check whether the action can be executed given the
+        Check whether the action can be executed given the current state
         '''

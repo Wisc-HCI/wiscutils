@@ -67,7 +67,7 @@ example_thing_1 = {
     'name':'Panda',
     'properties':[{'name':'grasp_state','value':'open'},
                   {'name':'ee_position','value':{'position':{'x':0,'y':0,'z':0},
-                                                 'quaternion':{'w':1,'x':0,'y':0,'z':0}}
+                                                 'orientation':{'w':1,'x':0,'y':0,'z':0}}
                                                           }]
 }
 
@@ -77,6 +77,6 @@ example_thing_2 = {
     'properties':[{'name':'grasping_force':'value':1},
                   {'name':'grasped','value':False},
                   {'name':'pose','value':{'position':{'x':0,'y':0,'z':0},
-                                          'quaternion':{'w':1,'x':0,'y':0,'z':0}}
+                                          'orientation':{'w':1,'x':0,'y':0,'z':0}}
                                                       }]
 }
