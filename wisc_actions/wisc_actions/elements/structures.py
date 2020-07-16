@@ -18,30 +18,6 @@ except:
 from abc import ABC, abstractmethod
 from .base import WiscBase
 
-# class Mode(WiscBase):
-#     '''
-#     Mode Class
-#     Itty bitty mode object that handles override and deferred values
-#     '''
-#     def __init__(self, override_value=None, deferred_value=None):
-#         self.deferred_value = deferred_value
-#         self.override_value = override_value
-#
-#     @property
-#     def empty(self):
-#         return self.override_value == None and self.deferred_value == None
-#
-#     @property
-#     def has_override(self):
-#         return self.override_value != None
-#
-#     @property
-#     def has_deferred(self):
-#         return self.deferred_value != None
-#
-#     def __repr__(self):
-#         return '[override:{0},defer:{1}]'.format(self.override_value,self.deferred_value)
-
 class Position(WiscBase):
 
     keys = [set(('x','y','z'))]
@@ -50,6 +26,10 @@ class Position(WiscBase):
         self.x = x
         self.y = y
         self.z = z
+
+    @property
+    def serialized(self):
+        return {'x':self.x,'y':self.y,'z':self.z}
 
     @property
     def ros_vector3(self):
@@ -198,6 +178,9 @@ class Pose(WiscBase):
         return '({0}, {1})'.format(self.position,self.quaternion)
 
 class Vector(WiscBase):
+    pass
+
+class Mesh(WiscBase):
     pass
 
 class Trajectory(ABC,WiscBase):

@@ -16,6 +16,5 @@ class Call(WiscBase):
         return {'id':self.id,'parameters':self.serialize(self.parameters)}
 
     @classmethod
-    def load(cls,serialized)
-        # TODO
-        pass
+    def load(cls,serialized):
+        return Call(id=serialized['id'],parameters=serialized['parameters'])
