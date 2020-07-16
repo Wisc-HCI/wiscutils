@@ -3,9 +3,9 @@ from .base import WiscBase
 from .properties import Property
 from .definitions import LiteralDefinition, PropertyDefinition, IndexDefinition
 
-class Executable(WiscBase):
+class Primitive(WiscBase):
     '''
-    Parent Class for Actions and Primitives.
+    Encoding for Primitive Actions. All higher-level management is handled by enclosing actions.
     '''
 
     keys = [set(['_id','parameters'])]
@@ -21,24 +21,9 @@ class Executable(WiscBase):
                 'name':self.name,
                 'parameters':self.serialize(self.parameters)}
 
-class Primitive(Executable):
-    '''
-    Encoding for Primitive Actions. All higher-level management is handled by enclosing actions.
-    '''
-
-    keys = [set(['_id','name','parameters'])]
-
-    def __init__(self, name, parameters, _id=None):
-        super(Primitive,self).__init__(_id, name, parameters)
-        self.agent = agent
-        self.priority = priority
-
-    @property
-    def serialized(self):
-        repr = super(Primitive,self).serialized
-        repr.update({'agent':self.agent,
-                     'priority':self.priority})
-        return repr
+    @classmethod
+    def load(cls,serialized):
+        return Primitive(**serialized)
 
     def resolve(self,state,parameters):
         '''
@@ -47,7 +32,8 @@ class Primitive(Executable):
         '''
         pass
 
-class Action(Executable):
+
+class Action(Primitive):
     '''
     Encoding for Mid-Level Actions, as well as Higher-Level Actions, such as Macros.
     By default, preconditions and postconditions are inferred by sub-actions, but additional
@@ -66,6 +52,17 @@ class Action(Executable):
     @classmethod
     def load(self,serialized):
         name = serialized['name']
+        parameters = serialized['parameters']
+        subactions = []
+        # Todo: finish loading all these attributes.
+        for serial_subaction in serialized['subactions']:
+            pass
+        for serial_definition in serialized['definitions']:
+            pass
+        for serial_precondition in serialized['preconditions']:
+            pass
+        for serial_postcondition in serialized['postconditions']:
+            pass
 
 
     @property
