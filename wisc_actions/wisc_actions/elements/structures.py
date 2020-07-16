@@ -1,41 +1,51 @@
 import numpy as np
 import math
+import warnings
 from scipy import interpolate
 from pyquaternion import Quaternion as pyQuaternion
-from wisc_tools.convenience import pairwise
-from wisc_tools.conversions import transformations
-from wisc_msgs.msg import Euler, EulerPose, EEPoseGoals
-from geometry_msgs.msg import Vector3 as rosVector3
-from geometry_msgs.msg import Point as rosPoint
-from geometry_msgs.msg import Quaternion as rosQuaternion
-from geometry_msgs.msg import Pose as rosPose
+from more_itertools import pairwise
+try:
+    from wisc_tools.conversions import transformations
+    from wisc_msgs.msg import Euler, EulerPose, EEPoseGoals
+    from geometry_msgs.msg import Vector3 as rosVector3
+    from geometry_msgs.msg import Point as rosPoint
+    from geometry_msgs.msg import Quaternion as rosQuaternion
+    from geometry_msgs.msg import Pose as rosPose
+    HAS_ROS = True
+except:
+    warnings.warn('ROS is not loaded. Exporting to ROS messages is not supported.',Warning)
+    HAS_ROS = False
 from abc import ABC, abstractmethod
+from .base import WiscBase
 
-class Mode(object):
-    '''
-    Mode Class
-    Itty bitty mode object that handles override and deferred values
-    '''
-    def __init__(self, override_value=None, deferred_value=None):
-        self.deferred_value = deferred_value
-        self.override_value = override_value
+# class Mode(WiscBase):
+#     '''
+#     Mode Class
+#     Itty bitty mode object that handles override and deferred values
+#     '''
+#     def __init__(self, override_value=None, deferred_value=None):
+#         self.deferred_value = deferred_value
+#         self.override_value = override_value
+#
+#     @property
+#     def empty(self):
+#         return self.override_value == None and self.deferred_value == None
+#
+#     @property
+#     def has_override(self):
+#         return self.override_value != None
+#
+#     @property
+#     def has_deferred(self):
+#         return self.deferred_value != None
+#
+#     def __repr__(self):
+#         return '[override:{0},defer:{1}]'.format(self.override_value,self.deferred_value)
 
-    @property
-    def empty(self):
-        return self.override_value == None and self.deferred_value == None
+class Position(WiscBase):
 
-    @property
-    def has_override(self):
-        return self.override_value != None
+    keys = [set(('x','y','z'))]
 
-    @property
-    def has_deferred(self):
-        return self.deferred_value != None
-
-    def __repr__(self):
-        return '[override:{0},defer:{1}]'.format(self.override_value,self.deferred_value)
-
-class Position(object):
     def __init__(self,x,y,z):
         self.x = x
         self.y = y
@@ -43,10 +53,12 @@ class Position(object):
 
     @property
     def ros_vector3(self):
+        assert HAS_ROS, 'This method requires ROS'
         return rosVector3(x=self.x,y=self.y,z=self.z)
 
     @property
     def ros_point(self):
+        assert HAS_ROS, 'This method requires ROS'
         return rosPoint(x=self.x,y=self.y,z=self.z)
 
     @property
@@ -65,57 +77,87 @@ class Position(object):
     def from_ros_point(cls,point):
         return Position(x=point.x,y=point.y,z=point.z)
 
+    @classmethod
+    def load(cls,data):
+        return Position(data['x'],data['y'],data['z'])
+
     def distance_to(self,other):
         return math.sqrt(math.pow(self.x-other.x,2)+math.pow(self.y-other.y,2)+math.pow(self.z-other.z,2))
 
     def __repr__(self):
         return '[x:{0},y:{1},z:{2}]'.format(self.x,self.y,self.z)
 
-class Quaternion(pyQuaternion):
+class Orientation(pyQuaternion,WiscBase):
+
+    keys = [set(('r','p','y')),set(('w','x','y','z'))]
 
     @property
     def ros_quaternion(self):
+        assert HAS_ROS, 'This method requires ROS'
         return rosQuaternion(x=self.x,y=self.y,z=self.z,w=self.w)
 
     @property
     def ros_euler(self):
+        assert HAS_ROS, 'This method requires ROS'
         (r,p,y) = transformations.euler_from_quaternion([self.w,self.x,self.y,self.z],'szxy')
         return Euler(r=r,p=p,y=y)
 
     @property
     def dict(self):
+        assert HAS_ROS, 'This method requires ROS'
         (r,p,y) = transformations.euler_from_quaternion([self.w,self.x,self.y,self.z],'szxy')
         return {'r':r,'p':p,'y':y}
 
+    @property
+    def serialize(self):
+        return self.dict
+
     @classmethod
     def from_vector_quaternion(self,vector):
-        return Quaternion(w=vector[0],x=vector[1],y=vector[2],z=vector[3])
+        return Orientation(w=vector[0],x=vector[1],y=vector[2],z=vector[3])
 
     @classmethod
     def from_py_quaternion(self,pyquaternion):
-        return Quaternion(x=pyquaternion.x,y=pyquaternion.y,z=pyquaternion.z,w=pyquaternion.w)
+        return Orientation(x=pyquaternion.x,y=pyquaternion.y,z=pyquaternion.z,w=pyquaternion.w)
 
     @classmethod
     def from_ros_quaternion(self,quaternion):
-        return Quaternion(x=quaternion.x,y=quaternion.y,z=quaternion.z,w=quaternion.w)
+        return Orientation(x=quaternion.x,y=quaternion.y,z=quaternion.z,w=quaternion.w)
 
     @classmethod
     def from_ros_euler(self,euler):
+        assert HAS_ROS, 'This method requires ROS'
         tf_quat = transformations.quaternion_from_euler(euler.r,euler.p,euler.y,'szxy')
-        return Quaternion.from_vector_quaternion(tf_quat)
+        return Orientation.from_vector_quaternion(tf_quat)
 
     @classmethod
     def from_euler_dict(self,dict):
+        assert HAS_ROS, 'This method requires ROS'
         tf_quat = transformations.quaternion_from_euler(dict['r'],dict['p'],dict['y'],'szxy')
-        return Quaternion.from_vector_quaternion(tf_quat)
+        return Orientation.from_vector_quaternion(tf_quat)
+
+    @classmethod
+    def from_dict(self,dict):
+        return Orientation(w=dict['w'],x=dict['z'],y=dict['y'],z=dict['z'])
+
+    @classmethod
+    def load(self,dict):
+        if set(('r','p','y')).issubset(set(dict.keys())):
+            return from_euler_dict(dict)
+        elif set(('w','x','y','z')).issubset(set(dict.keys())):
+            return from_dict(dict)
+
 
     def distance_to(self,other):
         return pyQuaternion.distance(self,other)
 
-class Pose(object):
-    def __init__(self,position,quaternion):
+class Pose(WiscBase):
+
+    keys = [set(('position','orientation'))]
+
+    def __init__(self,position,orientation):
         self.position = position
-        self.quaternion = quaternion
+        self.orientation = orientation
 
     @property
     def ros_pose(self):
@@ -132,13 +174,13 @@ class Pose(object):
     @classmethod
     def from_eulerpose_dict(cls,dict):
         position = Position(**dict['position'])
-        quaternion = Quaternion.from_euler_dict(dict['rotation'])
+        quaternion = Quaternion.from_euler_dict(dict['orientation'])
         return cls(position,quaternion)
 
     @classmethod
     def from_pose_dict(cls,dict):
         position = Position(**dict['position'])
-        quaternion = Quaternion(**dict['quaternion'])
+        quaternion = Quaternion(**dict['orientation'])
         return cls(position,quaternion)
 
     @classmethod
@@ -147,15 +189,18 @@ class Pose(object):
 
     @property
     def dict(self):
-        return {'position':self.position.dict,'rotation':self.quaternion.dict}
+        return {'position':self.position.dict,'orientation':self.quaternion.dict}
 
     def distance_to(self,pose):
-        return (self.position.distance_to(pose.position),self.quaternion.distance_to(pose.quaternion))
+        return (self.position.distance_to(pose.position),self.quaternion.distance_to(pose.orientation))
 
     def __repr__(self):
         return '({0}, {1})'.format(self.position,self.quaternion)
 
-class Trajectory(ABC):
+class Vector(WiscBase):
+    pass
+
+class Trajectory(ABC,WiscBase):
 
     def __init__(self,waypoints,kind='cubic',circuit=False,min_value=None,max_value=None):
         self.wps = waypoints
@@ -199,7 +244,7 @@ class Trajectory(ABC):
     def __repr__(self):
         return '[{0}]'.format(','.join(self.wps))
 
-class ModeTrajectory(Trajectory):
+class ModeTrajectory(Trajectory,WiscBase):
 
     def __init__(self,waypoints,fill='interpolate',kind='cubic',circuit=False,min_value=None,max_value=None):
         super(ModeTrajectory,self).__init__(waypoints,kind='cubic',circuit=False,min_value=None,max_value=None)
@@ -237,7 +282,7 @@ class ModeTrajectory(Trajectory):
             self.vfn = interpolate.UnivariateSpline(t,v,ext='const')
             #self.vfn = interpolate.interp1d(tp,vp,kind=self.kind,fill_value='extrapolate')
 
-class AnnotationTrajectory(Trajectory):
+class AnnotationTrajectory(Trajectory,WiscBase):
 
     @property
     def a(self):
@@ -259,7 +304,7 @@ class AnnotationTrajectory(Trajectory):
         pass
 
 
-class PoseTrajectory(Trajectory):
+class PoseTrajectory(Trajectory,WiscBase):
 
     @property
     def x(self):
