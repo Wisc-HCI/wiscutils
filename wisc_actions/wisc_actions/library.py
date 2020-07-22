@@ -11,9 +11,15 @@ example_action_1a = {
                     'value':0},
                    {'name':'grip_spacing',
                     'value':None}],
-    'subactions':[{'id':'5f0f29928cb32182289ebc2a','parameters':{'force':'force_value','spacing':'grip_spacing','agent':'agent','priority':'priority'}}],
+    'subactions':[{'id':'5f0f29928cb32182289ebc2a',
+                   'parameters':{'force':'force_value',
+                                 'spacing':'grip_spacing',
+                                 'agent':'agent',
+                                 'priority':'priority'}}],
     'preconditions':[],
-    'postconditions':[{'thing':'agent','property':{'name':'grasp_state','value':'closed'},'operation':'=='}],
+    'postconditions':[{'thing':'agent',
+                       'property':{'name':'grasp_state','value':'closed'},
+                       'operation':'=='}],
 }
 
 example_action_1b = {

@@ -1,13 +1,13 @@
 from .base import WiscBase
 
-class PlanningPlan(WiscBase):
+class PlanningProgram(WiscBase):
     pass
 
-class ProgramPlan(WiscBase):
+class ImperativeProgram(WiscBase):
     pass
 
-class StateMachinePlan(WiscBase):
+class AutomataProgram(WiscBase):
     pass
 
-class ExecutablePlan(WiscBase):
+class ExecutableProgram(WiscBase):
     pass
