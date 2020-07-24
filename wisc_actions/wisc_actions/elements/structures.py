@@ -183,7 +183,7 @@ class Vector(WiscBase):
 class Mesh(WiscBase):
     pass
 
-class Trajectory(ABC,WiscBase):
+class Trajectory(WiscBase):
 
     def __init__(self,waypoints,kind='cubic',circuit=False,min_value=None,max_value=None):
         self.wps = waypoints
