@@ -15,6 +15,10 @@ class Definition(WiscBase):
     def serialized(self):
         return {'name':self.name}
 
+    @classmethod
+    def load(self,serialized):
+        return Definition(serialized['name'])
+
     def get(self,namespace): # State?
         pass
 

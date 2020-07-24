@@ -5,6 +5,7 @@ from .properties import Property
 from .calls import Call
 from .definitions import LiteralDefinition, PropertyDefinition, IndexDefinition
 from .conditions import Condition
+from .flow import Branch, Loop
 
 class Primitive(WiscBase):
     '''
@@ -62,7 +63,7 @@ class Action(Primitive):
         preconditions = []
         postconditions = []
         for serial_subaction in serialized['subactions']:
-            subactions.append(Call.load(serial_subaction))
+            subactions.append(parse([Call,Loop,Branch],serial_subaction))
         for serial_definition in serialized['definitions']:
             definitions.append(parse([LiteralDefinition, PropertyDefinition, IndexDefinition],serial_definition))
         for serial_precondition in serialized['preconditions']:
@@ -156,8 +157,10 @@ class Action(Primitive):
         '''
         Calling "simulate" has the effect of executing the resolved action
         '''
+        pass
 
     def check(self,state,parameters):
         '''
         Check whether the action can be executed given the current state
         '''
+        pass
