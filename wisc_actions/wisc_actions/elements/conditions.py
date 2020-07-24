@@ -1,5 +1,5 @@
-from .base import WiscBase
 from enum import Enum
+from .base import WiscBase
 from .properties import Property
 
 class Operation(Enum):

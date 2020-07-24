@@ -1,10 +1,11 @@
-__all__ = ['Primitive','Executable',
+__all__ = ['Primitive','Action',
            'PlanningProgram','ImperativeProgram','AutomataProgram','ExecutableProgram',
            'Property','Condition','Call','Thing','Branch','Loop',
            'LiteralDefinition','PropertyDefinition','IndexDefinition',
            'Position','Orientation','Pose','PoseTrajectory']
 
-from .actions import Primitive, Executable
+from .base import WiscBase
+from .actions import Primitive, Action
 from .plans import PlanningProgram, ImperativeProgram, AutomataProgram, ExecutableProgram
 from .properties import Property
 from .conditions import Condition

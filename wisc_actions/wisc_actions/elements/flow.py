@@ -1,5 +1,4 @@
 from .base import WiscBase
-from .parse import parse
 from .calls import Call
 
 class Branch(WiscBase):
@@ -11,7 +10,7 @@ class Branch(WiscBase):
         - [Required] A set of calls that get checked consecutively
     '''
 
-    keys = [set('flow','calls')]
+    keys = [set(('flow','calls'))]
 
     def __init__(self,calls=[]):
         self.calls = calls
@@ -19,7 +18,7 @@ class Branch(WiscBase):
     @property
     def serialized(self):
         return {'flow':'branch',
-                'calls':[call.serialized for call in self.calls]}
+                'calls':self.serialize(self.calls)}
 
     @classmethod
     def load(self,serialized):
@@ -66,7 +65,7 @@ class Loop(WiscBase):
         - [Required] An action call to execute on each item
     '''
 
-    keys = [set('flow','call')]
+    keys = [set(('flow','call'))]
 
     def __init__(self,loopable,item,call):
         self.call = call
@@ -78,7 +77,7 @@ class Loop(WiscBase):
 
     @classmethod
     def load(self,serialized):
-        return Conditional(call=serialized['call'])
+        return Loop(call=serialized['call'])
 
     @property
     def preconditions(self):

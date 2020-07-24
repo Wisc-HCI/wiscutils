@@ -1,11 +1,10 @@
 from bson.objectid import ObjectId
 from .base import WiscBase
 from .parse import parse
-from .properties import Property
 from .calls import Call
+from .flow import Branch, Loop
 from .definitions import LiteralDefinition, PropertyDefinition, IndexDefinition
 from .conditions import Condition
-from .flow import Branch, Loop
 
 class Primitive(WiscBase):
     '''
@@ -65,7 +64,7 @@ class Action(Primitive):
         for serial_subaction in serialized['subactions']:
             subactions.append(parse([Call,Loop,Branch],serial_subaction))
         for serial_definition in serialized['definitions']:
-            definitions.append(parse([LiteralDefinition, PropertyDefinition, IndexDefinition],serial_definition))
+            definitions.append(parse([LiteralDefinition,PropertyDefinition,IndexDefinition],serial_definition))
         for serial_precondition in serialized['preconditions']:
             preconditions.append(Condition.load(serial_precondition))
         for serial_postcondition in serialized['postconditions']:

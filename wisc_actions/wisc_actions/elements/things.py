@@ -1,6 +1,6 @@
 from bson.objectid import ObjectId
-from .properties import Property
 from .base import WiscBase
+from .properties import Property
 
 class Thing(WiscBase):
     '''
@@ -15,12 +15,7 @@ class Thing(WiscBase):
     def __init__(self,name,properties,_id=None):
         self.id = ObjectId(_id)
         self.name = name
-        self.properties = []
-        for property in properties:
-            if isinstance(property,Property):
-                self.properties.append(property)
-            else:
-                self.properties.append(Property.load(property))
+        self.properties = properties
 
     @property
     def serialized(self):
@@ -28,4 +23,6 @@ class Thing(WiscBase):
 
     @classmethod
     def load(cls,serialized):
-        return Thing(**serialized)
+        return Thing(_id=serialized['_id'] if '_id' in serialized.keys() else None,
+                     name=serialized['name'],
+                     properties=[Property.load(content) for content in serialized['properties']])

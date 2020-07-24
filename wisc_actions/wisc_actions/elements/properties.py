@@ -1,7 +1,4 @@
 from .base import WiscBase
-from .structures import *
-from .things import Thing
-from .parse import parse
 
 class Property(WiscBase):
     '''
@@ -21,5 +18,5 @@ class Property(WiscBase):
     @classmethod
     def load(self,serialized):
         # Parse value. If it isn't one of these things, just use the serialized value.
-        value = parse([Thing,Positon,Orientation,Pose],serialized)
+        value = wisc_actions.parse([Thing,Positon,Orientation,Pose],serialized)
         return Property(name=serialized['name'],value=value)

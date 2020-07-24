@@ -15,7 +15,7 @@ try:
 except:
     warnings.warn('ROS is not loaded. Exporting to ROS messages is not supported.',Warning)
     HAS_ROS = False
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from .base import WiscBase
 
 class Position(WiscBase):
@@ -227,7 +227,7 @@ class Trajectory(WiscBase):
     def __repr__(self):
         return '[{0}]'.format(','.join(self.wps))
 
-class ModeTrajectory(Trajectory,WiscBase):
+class ModeTrajectory(Trajectory):
 
     def __init__(self,waypoints,fill='interpolate',kind='cubic',circuit=False,min_value=None,max_value=None):
         super(ModeTrajectory,self).__init__(waypoints,kind='cubic',circuit=False,min_value=None,max_value=None)
@@ -265,7 +265,7 @@ class ModeTrajectory(Trajectory,WiscBase):
             self.vfn = interpolate.UnivariateSpline(t,v,ext='const')
             #self.vfn = interpolate.interp1d(tp,vp,kind=self.kind,fill_value='extrapolate')
 
-class AnnotationTrajectory(Trajectory,WiscBase):
+class AnnotationTrajectory(Trajectory):
 
     @property
     def a(self):
@@ -287,7 +287,7 @@ class AnnotationTrajectory(Trajectory,WiscBase):
         pass
 
 
-class PoseTrajectory(Trajectory,WiscBase):
+class PoseTrajectory(Trajectory):
 
     @property
     def x(self):

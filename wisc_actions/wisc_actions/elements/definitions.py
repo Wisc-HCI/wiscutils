@@ -1,8 +1,7 @@
 from .base import WiscBase
 from .parse import parse
-from .structures import *
 from .things import Thing
-
+from .structures import Position, Orientation, Pose
 
 class Definition(WiscBase):
     '''
@@ -25,7 +24,7 @@ class Definition(WiscBase):
     def set(self,namespace,value): # State?
         pass
 
-class LiteralDefinition(WiscBase):
+class LiteralDefinition(Definition):
     '''
     Specification for defining a literal value in the namespace of an action.
     This is essentially equivalent to:
@@ -45,10 +44,10 @@ class LiteralDefinition(WiscBase):
 
     @classmethod
     def load(self,serialized):
-        value = parse([Thing,Position,Orientation,Pose],serialized)
+        value = wisc_actions.parse([Thing,Position,Orientation,Pose],serialized)
         return LiteralDefinition(name=serialized['name'],value=value)
 
-class PropertyDefinition(WiscBase):
+class PropertyDefinition(Definition):
     '''
     Specification for defining a value via a thing's property in the namespace of an action.
     This is essentially equivalent to:
@@ -67,13 +66,13 @@ class PropertyDefinition(WiscBase):
 
     @property
     def serialized(self):
-        serialized = super(LiteralDefinition,self).serialized
+        serialized = super(PropertyDefinition,self).serialized
         serialized.update({'item':self.item,
                            'property':self.property,
                            'fallback':self.serialize(self.fallback)})
 
 
-class IndexDefinition(WiscBase):
+class IndexDefinition(Definition):
     '''
     Specification for defining a value via an object's index in the namespace of an action.
     This is essentially equivalent to:
@@ -83,14 +82,14 @@ class IndexDefinition(WiscBase):
     keys = [set(('name','item','index'))]
 
     def __init__(self,name,item,index,fallback):
-        super(PropertyDefinition,self).__init__(name)
+        super(IndexDefinition,self).__init__(name)
         self.item = item
         self.index = index
         self.fallback = fallback
 
     @property
     def serialized(self):
-        serialized = super(LiteralDefinition,self).serialized
+        serialized = super(IndexDefinition,self).serialized
         serialized.update({'item':self.item,
                            'index':self.index,
                            'fallback':self.serialize(self.fallback)})
