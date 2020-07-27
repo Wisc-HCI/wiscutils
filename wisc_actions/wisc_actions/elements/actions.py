@@ -4,7 +4,7 @@ from .parse import parse
 from .calls import Call
 from .flow import Branch, Loop
 from .definitions import LiteralDefinition, PropertyDefinition, IndexDefinition
-from .conditions import Condition
+from .conditions import Condition, UnaryLTLCondition, BinaryLTLCondition
 
 class Primitive(WiscBase):
     '''
@@ -20,20 +20,13 @@ class Primitive(WiscBase):
 
     @property
     def serialized(self):
-        return {'_id':self.id,
+        return {'_id':str(self.id),
                 'name':self.name,
                 'parameters':self.serialize(self.parameters)}
 
     @classmethod
     def load(cls,serialized):
         return Primitive(**serialized)
-
-    def resolve(self,state,parameters):
-        '''
-        Calling "resolve" has the effect of resolving the executable
-        to a fully-specified version of itself, but not evaluating it.
-        '''
-        pass
 
 
 class Action(Primitive):
@@ -66,9 +59,9 @@ class Action(Primitive):
         for serial_definition in serialized['definitions']:
             definitions.append(parse([LiteralDefinition,PropertyDefinition,IndexDefinition],serial_definition))
         for serial_precondition in serialized['preconditions']:
-            preconditions.append(Condition.load(serial_precondition))
+            preconditions.append(parse([Condition,UnaryLTLCondition,BinaryLTLCondition],serial_precondition))
         for serial_postcondition in serialized['postconditions']:
-            postconditions.append(Condition.load(serial_postcondition))
+            postconditions.append(parse([Condition,UnaryLTLCondition,BinaryLTLCondition],serial_postcondition))
         return Action(_id=id,
                       name=name,
                       parameters=parameters,
@@ -148,7 +141,7 @@ class Action(Primitive):
     def resolve(self,state,parameters):
         '''
         Calling "resolve" has the effect of resolving the executable
-        to a fully-specified version of itself, but not evaluating it.
+        to a a static set of parameterized primitives.
         '''
         pass
 
