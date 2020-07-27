@@ -41,6 +41,7 @@ class LiteralDefinition(Definition):
     def serialized(self):
         serialized = super(LiteralDefinition,self).serialized
         serialized.update({'value':self.serialize(self.value)})
+        return serialized
 
     @classmethod
     def load(self,serialized):
@@ -70,6 +71,15 @@ class PropertyDefinition(Definition):
         serialized.update({'item':self.item,
                            'property':self.property,
                            'fallback':self.serialize(self.fallback)})
+        return serialized
+                           
+    @classmethod
+    def load(self,serialized):
+        fallback = serialized['fallback'] if 'fallback' in serialized.keys() else None
+        return PropertyDefinition(name=serialized['name'],
+                                  item=serialized['item'],
+                                  property=serialized['property'],
+                                  fallback=parse([Thing,Position,Orientation,Pose],fallback))
 
 
 class IndexDefinition(Definition):
@@ -93,3 +103,34 @@ class IndexDefinition(Definition):
         serialized.update({'item':self.item,
                            'index':self.index,
                            'fallback':self.serialize(self.fallback)})
+        return serialized
+                           
+    @classmethod
+    def load(self,serialized):
+        return IndexDefinition(name=serialized['name'],
+                               item=serialized['item'],
+                               property=serialized['index'])
+
+class DescriptionDefinition(Definition):
+    '''
+    Specification for defining a set of things based on descriptions.
+    This is essentially equivalent to:
+        boxes = [object for object in objects if object.is_box]
+    '''
+    
+    keys = [set(('name','descriptions'))]
+    
+    def __init__(self,name,description):
+        super(DescriptionDefinition,self).__init__(name)
+        self.descriptions = descriptions
+        
+    @property
+    def serialized(self):
+        serialized = super(DescriptionDefinition,self).serialized
+        serialized.update({'descriptions':[description.serialized for descriptions in self.descriptions]})
+        return serialized
+                           
+    @classmethod
+    def load(self,serialized):
+        return DescriptionDefinition(name=serialized['name'],
+                                     descriptions=[Description.load(content) for content in serialized['descriptions']])

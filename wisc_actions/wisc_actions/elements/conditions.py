@@ -42,9 +42,31 @@ class LTLOperation(Enum):
     def serialized(self):
         return self.value
 
+class Description(WiscBase):
+    '''
+    Encoding for thing-agnostic attributes.
+    '''
+    keys = [set(('property','operation'))]
+
+    def __init__(self,thing,property,operation):
+        self.thing = thing
+        self.property = property
+        self.operation = Operation
+
+    @classmethod
+    def load(cls,serialized):
+        return Condition(property=Property.load(serialized['property']),
+                         operation=Operation.load(serialized['operation']))
+                         
+    @property
+    def serialized(self):
+        return {'property':self.property.serialized,
+                'operation':self.operation.serialized
+                }
+
 class Condition(WiscBase):
     '''
-    Encoding for comparison conditions.
+    Encoding for thing-focused comparison conditions.
     '''
 
     keys = [set(('thing','property','operation'))]

@@ -68,7 +68,7 @@ class PlanningProgram(Program):
                 'initial':self.serialize(self.initial),
                 'goal':self.serialize(self.goal),
                 'rules':self.serialize(self.rules)
-        }
+               }
 
 class ImperativeProgram(Program):
     '''
