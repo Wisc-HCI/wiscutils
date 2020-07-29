@@ -11,9 +11,17 @@ example_action_1a = {
                     'value':0},
                    {'name':'grip_spacing',
                     'value':None}],
-    'subactions':[{'id':'5f0f29928cb32182289ebc2a','parameters':{'force':'force_value','spacing':'grip_spacing','agent':'agent','priority':'priority'}}],
-    'preconditions':[{'thing':'agent','property'{'name':'model','value':'Panda'},'operation':'=='}],
-    'postconditions':[{'thing':'agent','property':{'name':'grasp_state','value':'closed'},'operation':'=='}],
+    'subactions':[{'id':'5f0f29928cb32182289ebc2a',
+                   'parameters':{'force':'force_value',
+                                 'spacing':'grip_spacing',
+                                 'agent':'agent',
+                                 'priority':'priority'}}],
+    'preconditions':[{'thing':'agent',
+                      'property':{'name':'model','value':'Panda'},
+                      'operation':'=='}],
+    'postconditions':[{'thing':'agent',
+                       'property':{'name':'grasp_state','value':'closed'},
+                       'operation':'=='}]
 }
 
 example_action_1b = {
@@ -28,9 +36,17 @@ example_action_1b = {
                     'value':0},
                    {'name':'grip_spacing',
                     'value':None}],
-    'subactions':[{'id':'5f1b317e4ad66e28348447a9','parameters':{'force':'force_value','spacing':'grip_spacing','agent':'agent','priority':'priority'}}],
-    'preconditions':[{'thing':'agent','property'{'name':'model','value':'UR3'},'operation':'=='}],
-    'postconditions':[{'thing':'agent','property':{'name':'grasp_state','value':'closed'},'operation':'=='}],
+    'subactions':[{'id':'5f0f29928cb32182289ebc2a',
+                   'parameters':{'force':'force_value',
+                                 'spacing':'grip_spacing',
+                                 'agent':'agent',
+                                 'priority':'priority'}}],
+    'preconditions':[{'thing':'agent',
+                      'property':{'name':'model','value':'UR3'},
+                      'operation':'=='}],
+    'postconditions':[{'thing':'agent',
+                       'property':{'name':'grasp_state','value':'closed'},
+                       'operation':'=='}]
 }
 
 
@@ -66,11 +82,7 @@ example_action_3 = {
                                           'priority':'priority'}}]
                   }],
     'preconditions':[],
-    'postconditions':[{'thing':'agent','property':{'name':'ee_position','value':'goal_pose'},'operation':'=='}],
-}
-
-example_action_3 = {
-    '_id':'5f1afee64ad66e28348447a6'
+    'postconditions':[],
 }
 
 example_panda_primitive_1 = {
@@ -83,6 +95,14 @@ example_ur3_primitive_1 = {
     '_id':'5f1b317e4ad66e28348447a9',
     'name':'ur3_update_gripper',
     'parameters':['force','spacing','priority']
+}
+
+example_panda_primitive_1_parameterized = {
+    '_id':'5f0f29928cb32182289ebc2a',
+    'name':'panda_update_gripper',
+    'parameters':{'force':1,
+                  'spacing':None,
+                  'priority':0}
 }
 
 example_primitive_2 = {

@@ -45,7 +45,7 @@ class LiteralDefinition(Definition):
 
     @classmethod
     def load(self,serialized):
-        value = wisc_actions.parse([Thing,Position,Orientation,Pose],serialized)
+        value = parse([Thing,Position,Orientation,Pose],serialized)
         return LiteralDefinition(name=serialized['name'],value=value)
 
 class PropertyDefinition(Definition):
@@ -72,7 +72,7 @@ class PropertyDefinition(Definition):
                            'property':self.property,
                            'fallback':self.serialize(self.fallback)})
         return serialized
-                           
+
     @classmethod
     def load(self,serialized):
         fallback = serialized['fallback'] if 'fallback' in serialized.keys() else None
@@ -86,7 +86,7 @@ class IndexDefinition(Definition):
     '''
     Specification for defining a value via an object's index in the namespace of an action.
     This is essentially equivalent to:
-        pose = trajectory[2]
+        box = boxes[0]
     '''
 
     keys = [set(('name','item','index'))]
@@ -104,7 +104,7 @@ class IndexDefinition(Definition):
                            'index':self.index,
                            'fallback':self.serialize(self.fallback)})
         return serialized
-                           
+
     @classmethod
     def load(self,serialized):
         return IndexDefinition(name=serialized['name'],
@@ -117,19 +117,19 @@ class DescriptionDefinition(Definition):
     This is essentially equivalent to:
         boxes = [object for object in objects if object.is_box]
     '''
-    
+
     keys = [set(('name','descriptions'))]
-    
+
     def __init__(self,name,description):
         super(DescriptionDefinition,self).__init__(name)
         self.descriptions = descriptions
-        
+
     @property
     def serialized(self):
         serialized = super(DescriptionDefinition,self).serialized
         serialized.update({'descriptions':[description.serialized for descriptions in self.descriptions]})
         return serialized
-                           
+
     @classmethod
     def load(self,serialized):
         return DescriptionDefinition(name=serialized['name'],

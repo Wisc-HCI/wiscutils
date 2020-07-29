@@ -1,6 +1,29 @@
 from bson.objectid import ObjectId
 from .base import WiscBase
-from .properties import Property
+from .parse import parse
+from .structures import Position, Orientation, Pose
+from typing import Any
+
+class Property(WiscBase):
+    '''
+    A generic container for specifying object properties.
+    '''
+
+    keys = [set(('name','value'))]
+
+    def __init__(self,name='property',value=None):
+        self.name = name
+        self.value = value
+
+    @property
+    def serialized(self):
+        return {'name':self.name,'value':self.serialize(self.value)}
+
+    @classmethod
+    def load(self,serialized):
+        # Parse value. If it isn't one of these things, just use the serialized value.
+        value = parse([Thing,Position,Orientation,Pose],serialized)
+        return Property(name=serialized['name'],value=value)
 
 class Thing(WiscBase):
     '''
@@ -26,3 +49,11 @@ class Thing(WiscBase):
         return Thing(_id=serialized['_id'] if '_id' in serialized.keys() else None,
                      name=serialized['name'],
                      properties=[Property.load(content) for content in serialized['properties']])
+
+    def add_property(self,property:Property):
+        self.properties.append(property)
+
+    def create_property(self,name:str,value:Any) -> Property:
+        property = Property(name,value)
+        self.add_property(property)
+        return property

@@ -13,7 +13,7 @@ class Call(WiscBase):
 
     @property
     def serialized(self):
-        return {'id':self.id,'parameters':self.serialize(self.parameters)}
+        return {'id':str(self.id),'parameters':self.serialize(self.parameters)}
 
     @classmethod
     def load(cls,serialized):

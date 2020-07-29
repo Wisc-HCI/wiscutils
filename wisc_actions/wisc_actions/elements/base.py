@@ -1,4 +1,7 @@
 from abc import ABC, abstractmethod
+from bson.objectid import ObjectId
+import warnings
+import pprint
 
 class WiscBase(ABC):
 
@@ -20,6 +23,9 @@ class WiscBase(ABC):
         if isinstance(item,WiscBase):
             return item.serialized
 
+        # If it is an ObjectId, return the string version
+        if isinstance(item,ObjectId):
+            return str(item)
         # If it a list, enumerate the entries
         if isinstance(item,list):
             return [cls.serialize(i) for i in item]
@@ -27,10 +33,13 @@ class WiscBase(ABC):
         if isinstance(item,dict):
             return {k:cls.serialize(v) for k,v in item.items()}
         # If it a basic type, return it
-        if isinstance(item,int) or isinstance(item,float) or isinstance(item,str):
+        if isinstance(item,int) or isinstance(item,float) or isinstance(item,str) or item == None:
             return item
 
         # Serialization method not found.
         warnings.warn('Serialization not found for item of type {0}. Returning "None"'.format(type(item)),Warning)
 
         return None
+
+    def __repr__(self):
+        return pprint.pformat(self.serialized)

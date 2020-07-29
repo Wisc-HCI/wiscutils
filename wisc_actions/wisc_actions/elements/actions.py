@@ -3,8 +3,9 @@ from .base import WiscBase
 from .parse import parse
 from .calls import Call
 from .flow import Branch, Loop
-from .definitions import LiteralDefinition, PropertyDefinition, IndexDefinition
-from .conditions import Condition, UnaryLTLCondition, BinaryLTLCondition
+from .definitions import Definition, LiteralDefinition, PropertyDefinition, IndexDefinition, DescriptionDefinition
+from .conditions import Condition, PropertyCondition, UnaryLTLCondition, BinaryLTLCondition
+from typing import List
 
 class Primitive(WiscBase):
     '''
@@ -13,7 +14,7 @@ class Primitive(WiscBase):
 
     keys = [set(['_id','name','parameters'])]
 
-    def __init__(self, name, parameters, _id=None):
+    def __init__(self, name:str, parameters:List[str], _id:str=None):
         self.id = ObjectId(_id)
         self.name = name
         self.parameters = parameters
@@ -25,8 +26,11 @@ class Primitive(WiscBase):
                 'parameters':self.serialize(self.parameters)}
 
     @classmethod
-    def load(cls,serialized):
+    def load(cls,serialized:dict):
         return Primitive(**serialized)
+
+    def create_call(self,parameters:dict) -> Call:
+        return Call(id=self.id,parameters=parameters)
 
 
 class Action(Primitive):
@@ -38,8 +42,8 @@ class Action(Primitive):
 
     keys = [set(['_id','name','parameters','subactions','preconditions','postconditions'])]
 
-    def __init__(self, name, parameters, subactions, definitions, preconditions, postconditions, _id=None):
-        super(Action,self).__init__(_id, name, parameters)
+    def __init__(self, name:str, parameters:List[str], subactions:List[Call], definitions:List[Definition], preconditions:List[Condition], postconditions:List[Condition], _id:str=None):
+        super(Action,self).__init__(name, parameters,_id=_id)
         self.subactions = subactions
         self.definitions = definitions
         self.additional_preconditions = preconditions
@@ -92,6 +96,7 @@ class Action(Primitive):
             if isinstance(subaction,Action):
                 # Add the preconditions
                 pass
+        return preconditions
 
     @property
     def inferred_postconditions(self):
@@ -156,3 +161,27 @@ class Action(Primitive):
         Check whether the action can be executed given the current state
         '''
         pass
+
+    def add_definition(self,definition:Definition):
+        self.definitions.append(definition)
+
+    def create_definition(self,**kwargs) -> Definition:
+        definition = parse([LiteralDefinition, PropertyDefinition, IndexDefinition, DescriptionDefinition],kwargs)
+        self.add_definition(definition)
+        return definition
+
+    def add_precondition(self,condition:Condition):
+        self.additional_preconditions.append(condition)
+
+    def create_precondition(self,**kwargs):
+        precondition = parse([PropertyCondition,UnaryLTLCondition,BinaryLTLCondition],kwargs)
+        self.add_precondition(precondition)
+        return precondition
+
+    def add_postcondition(self,condition:Condition):
+        self.additional_postconditions.append(condition)
+
+    def create_postcondition(self,**kwargs):
+        postcondition = parse([PropertyCondition,UnaryLTLCondition,BinaryLTLCondition],kwargs)
+        self.add_postcondition(postcondition)
+        return postcondition

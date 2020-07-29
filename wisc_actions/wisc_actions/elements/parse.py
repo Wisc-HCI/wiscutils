@@ -10,5 +10,3 @@ def parse(classes,serialized):
                 if keyset == set(serialized.keys()):
                     return cls.load(serialized)
     return serialized
-    
-
