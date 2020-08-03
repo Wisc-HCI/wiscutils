@@ -1,6 +1,7 @@
 from .base import WiscBase
 from .parse import parse
 from .things import Thing
+from .math import Math
 from .structures import Position, Orientation, Pose
 
 class Definition(WiscBase):
@@ -134,3 +135,27 @@ class DescriptionDefinition(Definition):
     def load(self,serialized):
         return DescriptionDefinition(name=serialized['name'],
                                      descriptions=[Description.load(content) for content in serialized['descriptions']])
+
+class MathDefinition(Definition):
+    '''
+    Specification for defining a set of things based on math operations.
+    This is essentially equivalent to:
+        a = b + c
+    '''
+
+    keys = [set(('name','math'))]
+
+    def __init__(self,name:str,math:Math):
+        super(MathDefinition,self).__init__(name)
+        self.math = math
+
+    @property
+    def serialized(self):
+        serialized = super(MathDefinition,self).serialized
+        serialized.update({'math':self.math.serialized})
+        return serialized
+
+    @classmethod
+    def load(self,serialized):
+        return MathDefinition(name=serialized['name'],
+                              math=Math.load(serialized['math']))
