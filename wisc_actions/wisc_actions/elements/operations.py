@@ -38,5 +38,5 @@ class MathOperation(Operation):
     DIVIDE = '/'
     POWER = '^'
     MODULUS = '%'
-    CARTESIAN_DISTANCE = 'position_dist'
+    CARTESIAN_DISTANCE = 'cartesian_dist'
     ANGULAR_DISTANCE = 'angular_dist'
