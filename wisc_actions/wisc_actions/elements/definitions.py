@@ -29,15 +29,16 @@ class Definition(WiscBase):
     '''
     Specification for defining a value in the namespace of an action.
     '''
-    def __init__(self,name):
+
+    def __init__(self, name):
         self.name = name
 
     @property
     def serialized(self):
-        return {'name':self.name}
+        return {'name': self.name}
 
     @classmethod
-    def load(self,serialized):
+    def load(cls, serialized):
         return Definition(serialized['name'])
 
 
@@ -53,22 +54,25 @@ class LiteralDefinition(Definition):
         y = 2
     '''
 
-    keys = [set(('name','value'))]
+    keys = [set(('name', 'value'))]
 
-    def __init__(self,name,value):
-        super(LiteralDefinition,self).__init__(name)
+    def __init__(self, name, value):
+        super(LiteralDefinition, self).__init__(name)
         self.value = value
+        # set value in namespace
+        # self.set(namespace, self.value)
 
     @property
     def serialized(self):
-        serialized = super(LiteralDefinition,self).serialized
-        serialized.update({'value':self.serialize(self.value)})
+        serialized = super(LiteralDefinition, self).serialized
+        serialized.update({'value': self.serialize(self.value)})
         return serialized
 
     @classmethod
-    def load(self,serialized):
-        value = parse([Thing,Position,Orientation,Pose],serialized)
-        return LiteralDefinition(name=serialized['name'],value=value)
+    def load(cls, serialized):
+        value = parse([Thing, Position, Orientation, Pose], serialized)
+        return LiteralDefinition(name=serialized['name'], value=value)
+
 
     def get(self,context): # State?
         return self.value
@@ -83,29 +87,30 @@ class PropertyDefinition(Definition):
         position = pose.position
     '''
 
-    keys = [set(('name','item','property'))]
+    keys = [set(('name', 'item', 'property'))]
 
-    def __init__(self,name,item,property,fallback=None):
-        super(PropertyDefinition,self).__init__(name)
+    def __init__(self, name, item, property, fallback=None):
+        super(PropertyDefinition, self).__init__(name)
         self.item = item
         self.property = property
         self.fallback = fallback
 
     @property
     def serialized(self):
-        serialized = super(PropertyDefinition,self).serialized
-        serialized.update({'item':self.item,
-                           'property':self.property,
-                           'fallback':self.serialize(self.fallback)})
+        serialized = super(PropertyDefinition, self).serialized
+        serialized.update({'item': self.item,
+                           'property': self.property,
+                           'fallback': self.serialize(self.fallback)})
         return serialized
 
     @classmethod
-    def load(self,serialized):
-        fallback = serialized['fallback'] if 'fallback' in serialized.keys() else None
+    def load(cls, serialized):
+        fallback = serialized['fallback'] if 'fallback' in serialized.keys(
+        ) else None
         return PropertyDefinition(name=serialized['name'],
                                   item=serialized['item'],
                                   property=serialized['property'],
-                                  fallback=parse([Thing,Position,Orientation,Pose],fallback))
+                                  fallback=parse([Thing, Position, Orientation, Pose], fallback))
 
     @abstractmethod
     def get(self,context):
@@ -142,24 +147,24 @@ class IndexDefinition(Definition):
         box = boxes[0]
     '''
 
-    keys = [set(('name','item','index'))]
+    keys = [set(('name', 'item', 'index'))]
 
-    def __init__(self,name,item,index,fallback):
-        super(IndexDefinition,self).__init__(name)
+    def __init__(self, name, item, index, fallback):
+        super(IndexDefinition, self).__init__(name)
         self.item = item
         self.index = index
         self.fallback = fallback
 
     @property
     def serialized(self):
-        serialized = super(IndexDefinition,self).serialized
-        serialized.update({'item':self.item,
-                           'index':self.index,
-                           'fallback':self.serialize(self.fallback)})
+        serialized = super(IndexDefinition, self).serialized
+        serialized.update({'item': self.item,
+                           'index': self.index,
+                           'fallback': self.serialize(self.fallback)})
         return serialized
 
     @classmethod
-    def load(self,serialized):
+    def load(cls, serialized):
         return IndexDefinition(name=serialized['name'],
                                item=serialized['item'],
                                property=serialized['index'])
@@ -176,20 +181,21 @@ class DescriptionDefinition(Definition):
         boxes = [object for object in objects if object.is_box]
     '''
 
-    keys = [set(('name','descriptions'))]
+    keys = [set(('name', 'descriptions'))]
 
-    def __init__(self,name,description):
-        super(DescriptionDefinition,self).__init__(name)
+    def __init__(self, name, description):
+        super(DescriptionDefinition, self).__init__(name)
         self.descriptions = descriptions
 
     @property
     def serialized(self):
-        serialized = super(DescriptionDefinition,self).serialized
-        serialized.update({'descriptions':[description.serialized for descriptions in self.descriptions]})
+        serialized = super(DescriptionDefinition, self).serialized
+        serialized.update(
+            {'descriptions': [description.serialized for descriptions in self.descriptions]})
         return serialized
 
     @classmethod
-    def load(self,serialized):
+    def load(cls, serialized):
         return DescriptionDefinition(name=serialized['name'],
                                      descriptions=[Description.load(content) for content in serialized['descriptions']])
 
@@ -205,20 +211,20 @@ class MathDefinition(Definition):
         a = b + c
     '''
 
-    keys = [set(('name','math'))]
+    keys = [set(('name', 'math'))]
 
-    def __init__(self,name:str,math:Math):
-        super(MathDefinition,self).__init__(name)
+    def __init__(self, name: str, math: Math):
+        super(MathDefinition, self).__init__(name)
         self.math = math
 
     @property
     def serialized(self):
-        serialized = super(MathDefinition,self).serialized
-        serialized.update({'math':self.math.serialized})
+        serialized = super(MathDefinition, self).serialized
+        serialized.update({'math': self.math.serialized})
         return serialized
 
     @classmethod
-    def load(self,serialized):
+    def load(cls, serialized):
         return MathDefinition(name=serialized['name'],
                               math=Math.load(serialized['math']))
 

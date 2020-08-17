@@ -6,22 +6,27 @@ from flask import Flask
 
 # This will probably all change.
 
+
 class WiscProgramNode(Node):
     '''
     Node that handles and interfaces with REST/ROS calls
     '''
+
     def __init__(self):
-        super(WiscProgramNode,self).__init__('wisc_program')
+        super(WiscProgramNode, self).__init__('wisc_program')
         self.app = Flask(__name__)
 
 
 def main(args=None):
-    rclpy.init(args=args)
+    try:
+        rclpy.init(args=args)
 
-    node = WiscProgramNode()
-    rclpy.spin(node)
-    node.destroy_node()
-    rclpy.shutdown()
+        node = WiscProgramNode()
+        rclpy.spin(node)
+        node.destroy_node()
+        rclpy.shutdown()
+    except KeyboardInterrupt:
+        pass
 
 
 if __name__ == '__main__':
