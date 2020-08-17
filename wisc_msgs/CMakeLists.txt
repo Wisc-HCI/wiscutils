@@ -31,6 +31,7 @@ set(msg_files
   "msg/Euler.msg"
   "msg/EulerPose.msg"
   "msg/JointAngles.msg"
+  "msg/LivelyGoals.msg"
 )
 
 rosidl_generate_interfaces(${PROJECT_NAME}

@@ -17,6 +17,7 @@ except:
     HAS_ROS = False
 from abc import abstractmethod
 from .base import WiscBase
+from .parse import parse
 
 class Position(WiscBase):
 
@@ -176,6 +177,36 @@ class Pose(WiscBase):
 
     def __repr__(self):
         return '({0}, {1})'.format(self.position,self.quaternion)
+
+class Enumerable(WiscBase):
+
+    keys = [set(('items'))]
+
+    def __init__(self,items):
+        self.items = items
+
+    def __len__(self):
+        return len(self.items)
+
+    def __iter__(self):
+        return self.items.__iter__()
+
+    def __getitem__(self,i):
+        return self.items[i]
+
+    def append(self,item):
+        self.items.append(item)
+
+    @property
+    def serialized(self):
+        # Note, this probably shouldn't be serialized.
+        return {'items':[self.serialize(item) for item in self.items]}
+
+    @classmethod
+    def load(cls,data):
+        # Note, this probably shouldn't be loaded.
+        return Enumerable([parse([Position,Orientation,Pose],item) for item in data['items']])
+
 
 class Vector(WiscBase):
     pass

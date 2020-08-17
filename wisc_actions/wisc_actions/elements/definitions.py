@@ -4,6 +4,27 @@ from .things import Thing
 from .math import Math
 from .structures import Position, Orientation, Pose
 
+class AttributeWrapper(WiscBase):
+    '''
+    Wrapper for containing non-WiscBase items.
+    '''
+    def __init__(self,obj,property,lookup_type='property'):
+        self.obj = obj
+        self.property = property
+        self.lookup_type = lookup_type
+
+    def get(self):
+        if self.lookup_type == 'property':
+            getattr(self.obj, self.property)
+        if self.lookup_type == 'dictionary':
+            self.obj[self.property]
+
+    def set(self,value):
+        if self.lookup_type == 'property':
+            setattr(self.obj,self.property,value)
+        elif self.lookup_type == 'dictionary':
+            self.obj[self.property] = value
+
 class Definition(WiscBase):
     '''
     Specification for defining a value in the namespace of an action.
@@ -19,11 +40,11 @@ class Definition(WiscBase):
     def load(self,serialized):
         return Definition(serialized['name'])
 
-    def get(self,namespace): # State?
+
+    @abstractmethod
+    def get(self,context): # State?
         pass
 
-    def set(self,namespace,value): # State?
-        pass
 
 class LiteralDefinition(Definition):
     '''
@@ -48,6 +69,10 @@ class LiteralDefinition(Definition):
     def load(self,serialized):
         value = parse([Thing,Position,Orientation,Pose],serialized)
         return LiteralDefinition(name=serialized['name'],value=value)
+
+    def get(self,context): # State?
+        return self.value
+
 
 class PropertyDefinition(Definition):
     '''
@@ -82,6 +107,33 @@ class PropertyDefinition(Definition):
                                   property=serialized['property'],
                                   fallback=parse([Thing,Position,Orientation,Pose],fallback))
 
+    @abstractmethod
+    def get(self,context):
+        # Item is the reference to the object, or the id in state
+        obj = context.get(self.item)
+
+        # Three cases:
+        # Property Class of Thing (e.g. is_ball(obj))
+        if isinstance(Thing,obj):
+            for property in obj.properties:
+                if property.name == self.property:
+                    return property
+
+        # Key in Dictionary (e.g obj['ball'])
+        elif isinstance(Dict, obj):
+            # Might have to change this:
+            return AttributeWrapper(obj,self.property,lookup_type='dictionary')
+
+        # Python Attribute of Thing (e.g. obj.ball)
+        elif isinstance(WiscBase,obj):
+            # Might have to change this:
+            attr = getattr(obj, self.property)
+            if not isinstance(WiscBase,attr):
+                return AttributeWrapper(obj,self.property,lookup_type='property')
+            return attr
+
+        return self.fallback
+
 
 class IndexDefinition(Definition):
     '''
@@ -112,6 +164,11 @@ class IndexDefinition(Definition):
                                item=serialized['item'],
                                property=serialized['index'])
 
+    @abstractmethod
+    def get(self,context):
+        # Returns an item in a WiscBase Enumerable
+        pass
+
 class DescriptionDefinition(Definition):
     '''
     Specification for defining a set of things based on descriptions.
@@ -136,6 +193,11 @@ class DescriptionDefinition(Definition):
         return DescriptionDefinition(name=serialized['name'],
                                      descriptions=[Description.load(content) for content in serialized['descriptions']])
 
+    @abstractmethod
+    def get(self,context):
+        # Returns a WiscBase Enumerable
+        pass
+
 class MathDefinition(Definition):
     '''
     Specification for defining a set of things based on math operations.
@@ -159,3 +221,8 @@ class MathDefinition(Definition):
     def load(self,serialized):
         return MathDefinition(name=serialized['name'],
                               math=Math.load(serialized['math']))
+
+    @abstractmethod
+    def get(self,context):
+        # Returns a WiscBase Enumerable
+        pass

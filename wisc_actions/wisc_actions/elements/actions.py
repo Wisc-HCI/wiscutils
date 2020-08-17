@@ -120,45 +120,66 @@ class Action(Primitive):
         '''
         return self.inferred_postconditions + self.additional_postconditions
 
-    def get_namespace(self,state,parameters):
+    def update_context(self,context,parameters:Dict):
         '''
-        Obtain all items in the namespace of the action.
+        Update all items in the context of the action for its execution.
         '''
-        namespace = {}
-        # First, get the parameters specified as arguments
-        for parameter in self.parameters:
-            item = parameters[parameter]
-            # Check to see if the value is in the state space
-            if item in state:
-                # Retrieve the thing for that id item
-                namespace[parameter] = state[item]
-            else:
-                # Save the literal item value
-                namespace[parameter] = item
+        # add a new scope
+        scope = {} # (ref, obj) pairs
 
-        # Next, define anything in the definitions.
-        for definitions in self.definitions:
-            name = definition.name
-            namespace[name] = definition
+        # add all parameters
 
-        return namespace
+        assert set(parameters.keys()) == set(self.parameters)
 
-    def resolve(self,state,parameters):
+        # argument_parameters = { 'grip': 3, 'force': 67 }
+        for key, value in parameters.items():
+            scope[Reference(key)] = value
+
+        # scope: { 'grip': 3, 'force': 67 }
+
+        # add anything in definitions
+        for def in self.definitions:
+            scope[Reference(def.name)] = def
+
+        # scope: { 'grip': 3, 'force': 67, 'some_def': {fallback: 1}  }
+
+        # exit
+        context.add(scope=scope)
+
+        # # First, get the parameters specified as arguments
+        # for parameter in self.parameters:
+        #     item = parameters[parameter]
+        #     # Check to see if the value is in the context space
+        #     if item in context:
+        #         # Retrieve the thing for that id item
+        #         context[parameter] = context[item]
+        #     else:
+        #         # Save the literal item value
+        #         context[parameter] = item
+        #
+        # # Next, define anything in the definitions.
+        # for definitions in self.definitions:
+        #     name = definition.name
+        #     context[name] = definition
+        #
+        # return context
+
+    def resolve(self,context,parameters):
         '''
         Calling "resolve" has the effect of resolving the executable
         to a a static set of parameterized primitives.
         '''
         pass
 
-    def simulate(self,state,parameters):
+    def simulate(self,context,parameters):
         '''
         Calling "simulate" has the effect of executing the resolved action
         '''
         pass
 
-    def check(self,state,parameters):
+    def check(self,context,parameters):
         '''
-        Check whether the action can be executed given the current state
+        Check whether the action can be executed given the current context
         '''
         pass
 

@@ -4,6 +4,37 @@ from .parse import parse
 from .structures import Position, Orientation, Pose
 from typing import Any
 
+# class Literal(WiscBase):
+#     '''
+#     Wrapper for specifying literal values.
+#     '''
+#     keys = []
+#
+#     def __init__(self,value=None):
+#         self.value = value
+#
+#     def serialized(self):
+#         return self.value
+#
+#     def load(self,serialized):
+#         return Literal(serialized)
+
+class Reference(WiscBase):
+    '''
+    Wrapper for handling references to things in the space
+    '''
+    keys = []
+
+    def __init__(self,name="ref"):
+        self.name = name
+
+    def serialized(self):
+        return self.name
+
+    def load(self,serialized):
+        return Reference(serialized)
+
+
 class Property(WiscBase):
     '''
     A generic container for specifying object properties.

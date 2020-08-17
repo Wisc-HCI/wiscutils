@@ -178,13 +178,13 @@ class AutomataProgram(Program):
     Program focused on state-action representations
     '''
 
-    keys = [set(('name','actions','states','transitions','initial_state','end_states','rules'))]
+    keys = [set(('name','actions','states','transitions','initial','end_states','rules'))]
 
-    def __init__(self,name='My Automata Program',actions=[],states=[],transitions=[],initial_state=None,end_states=[],rules=[],_id=None):
+    def __init__(self,name='My Automata Program',actions=[],states=[],transitions=[],initial=None,end_states=[],rules=[],_id=None):
         super(AutomataProgram,self).__init__(name,actions,initial=[],_id=_id)
         self.states = states
         self.transitions = transitions
-        self.initial_state = initial_state
+        self.initial = initial
         self.end_states = end_states
         self.rules = rules
 

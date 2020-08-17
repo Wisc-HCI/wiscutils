@@ -14,7 +14,6 @@ example_action_1a = {
     'subactions':[{'id':'5f0f29928cb32182289ebc2a',
                    'parameters':{'force':'force_value',
                                  'spacing':'grip_spacing',
-                                 'agent':'agent',
                                  'priority':'priority'}}],
     'preconditions':[{'thing':'agent',
                       'property':{'name':'model','value':'Panda'},
@@ -39,7 +38,6 @@ example_action_1b = {
     'subactions':[{'id':'5f0f29928cb32182289ebc2a',
                    'parameters':{'force':'force_value',
                                  'spacing':'grip_spacing',
-                                 'agent':'agent',
                                  'priority':'priority'}}],
     'preconditions':[{'thing':'agent',
                       'property':{'name':'model','value':'UR3'},
@@ -134,7 +132,7 @@ example_agent_2 = {
 example_thing_2 = {
     '_id':'5f0f5e5d8cb32182289ebc2c',
     'name':'Ball',
-    'properties':[{'name':'grasping_force':'value':1},
+    'properties':[{'name':'grasping_force','value':1},
                   {'name':'grasped','value':False},
                   {'name':'pose','value':{'position':{'x':0,'y':0,'z':0},
                                           'orientation':{'w':1,'x':0,'y':0,'z':0}}
