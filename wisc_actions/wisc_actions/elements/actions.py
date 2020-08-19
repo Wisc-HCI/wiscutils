@@ -123,7 +123,7 @@ class Action(Primitive):
         '''
         return self.inferred_postconditions + self.additional_postconditions
 
-    def update_context(self,context,parameters:Dict):
+    def update_context(self,context,parameters:dict):
         '''
         Update all items in the context of the action for its execution.
         '''
@@ -141,8 +141,8 @@ class Action(Primitive):
         # scope: { 'grip': 3, 'force': 67 }
 
         # add anything in definitions
-        for def in self.definitions:
-            scope[Reference(def.name)] = def
+        for definition in self.definitions:
+            scope[Reference(definition.name)] = definition
 
         # scope: { 'grip': 3, 'force': 67, 'some_def': {fallback: 1}  }
 

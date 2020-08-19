@@ -7,7 +7,7 @@ class Call(WiscBase):
 
     keys = [set(('id','parameters'))]
 
-    def __init__(self,id,parameters:Dict):
+    def __init__(self,id,parameters:dict):
         self.id = id
         self.parameters = parameters
 

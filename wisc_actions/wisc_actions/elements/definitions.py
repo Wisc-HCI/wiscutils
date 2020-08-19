@@ -3,6 +3,7 @@ from .parse import parse
 from .things import Thing
 from .math import Math
 from .structures import Position, Orientation, Pose
+from abc import abstractmethod
 
 class AttributeWrapper(WiscBase):
     '''
