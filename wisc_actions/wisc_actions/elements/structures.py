@@ -30,7 +30,7 @@ class Position(WiscBase):
 
     @property
     def serialized(self):
-        return {'x':self.x,'y':self.y,'z':self.z}
+        return self.dict
 
     @property
     def ros_vector3(self):
@@ -90,7 +90,7 @@ class Orientation(pyQuaternion,WiscBase):
         return {'r':r,'p':p,'y':y}
 
     @property
-    def serialize(self):
+    def serialized(self):
         return self.dict
 
     @classmethod
@@ -142,7 +142,7 @@ class Pose(WiscBase):
 
     @property
     def ros_pose(self):
-        return rosPose(position=self.position.ros_point,orientation=self.quaternion.ros_quaternion)
+        return rosPose(position=self.position.ros_point,orientation=self.orientation.ros_quaternion)
 
     @property
     def ros_eulerpose(self):
@@ -155,13 +155,13 @@ class Pose(WiscBase):
     @classmethod
     def from_eulerpose_dict(cls,dict):
         position = Position(**dict['position'])
-        quaternion = Quaternion.from_euler_dict(dict['orientation'])
+        quaternion = Orientation.from_euler_dict(dict['orientation'])
         return cls(position,quaternion)
 
     @classmethod
     def from_pose_dict(cls,dict):
         position = Position(**dict['position'])
-        quaternion = Quaternion(**dict['orientation'])
+        quaternion = Orientation(**dict['orientation'])
         return cls(position,quaternion)
 
     @classmethod
@@ -170,13 +170,21 @@ class Pose(WiscBase):
 
     @property
     def dict(self):
-        return {'position':self.position.dict,'orientation':self.quaternion.dict}
+        return {'position':self.position.dict,'orientation':self.orientation.dict}
 
     def distance_to(self,pose):
-        return (self.position.distance_to(pose.position),self.quaternion.distance_to(pose.orientation))
+        return (self.position.distance_to(pose.position),self.orientation.distance_to(pose.orientation))
 
     def __repr__(self):
-        return '({0}, {1})'.format(self.position,self.quaternion)
+        return '({0}, {1})'.format(self.position,self.orientation)
+
+    @property
+    def serialized(self):
+        return self.dict
+
+    @classmethod
+    def load(cls,data):
+        return Pose(Position.load(data['position']),Orientation.load(data['orientation']))
 
 class Enumerable(WiscBase):
 
