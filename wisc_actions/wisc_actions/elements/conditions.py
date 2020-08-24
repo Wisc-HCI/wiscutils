@@ -22,11 +22,12 @@ class Description(Condition):
     def __init__(self,property:Property,operation:PropertyOperation):
         super(Description,self).__init__(operation)
         self.property = property
+        self.operation = operation
 
     @classmethod
     def load(cls,serialized):
-        return Condition(property=Property.load(serialized['property']),
-                         operation=Operation.load(serialized['operation']))
+        return Description(property=Property.load(serialized['property']),
+                           operation=Operation.load(serialized['operation']))
 
     @property
     def serialized(self):

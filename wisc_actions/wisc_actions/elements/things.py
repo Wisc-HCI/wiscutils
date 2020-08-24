@@ -56,6 +56,9 @@ class Property(WiscBase):
         value = parse([Thing,Position,Orientation,Pose],serialized)
         return Property(name=serialized['name'],value=value)
 
+    def __eq__(self, other):
+        return self.name == other.name and self.value == other.value
+
 class Thing(WiscBase):
     '''
     Takes 3 Parameters:
@@ -83,6 +86,26 @@ class Thing(WiscBase):
 
     def add_property(self,property:Property):
         self.properties.append(property)
+
+    def has_property(self,property_name:str):
+        for property in self.properties:
+            if property.name == property_name:
+                return True
+        return False
+
+    def get_property(self,property_name:str):
+        for property in self.properties:
+            if property.name == property_name:
+                return property
+
+    def has_description(self,description):
+        if self.has_property(description.property.name):
+            if description.operation == PropertyOperation.EXISTS:
+                return self.has_property(description.property.name)
+            prop = self.get_property(description.property.name)
+            return description.operation.exec(prop.value,description.property.value)
+        else:
+            return False
 
     def create_property(self,name:str,value:Any) -> Property:
         property = Property(name,value)

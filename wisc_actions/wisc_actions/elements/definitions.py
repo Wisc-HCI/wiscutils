@@ -3,6 +3,7 @@ from .parse import parse
 from .things import Thing
 from .math import Math
 from .structures import Position, Orientation, Pose
+from .operations import *
 from abc import abstractmethod
 
 class AttributeWrapper(WiscBase):
@@ -173,7 +174,12 @@ class IndexDefinition(Definition):
     @abstractmethod
     def get(self,context):
         # Returns an item in a WiscBase Enumerable
-        pass
+        enum = context.get(self.item)
+        if isinstance(Enumerable, enum):
+            if len(enum) != 0 and self.index >= len(enum):
+                return self.fallback # index out of bounds
+            return enum[self.index]
+        return self.fallback
 
 class DescriptionDefinition(Definition):
     '''
@@ -182,17 +188,18 @@ class DescriptionDefinition(Definition):
         boxes = [object for object in objects if object.is_box]
     '''
 
-    keys = [set(('name', 'descriptions'))]
+    keys = [set(('name', 'descriptions', 'operation'))]
 
-    def __init__(self, name, description):
+    def __init__(self, name, descriptions, operation:SetOperation):
         super(DescriptionDefinition, self).__init__(name)
         self.descriptions = descriptions
+        self.operation = operation
 
     @property
     def serialized(self):
         serialized = super(DescriptionDefinition, self).serialized
         serialized.update(
-            {'descriptions': [description.serialized for descriptions in self.descriptions]})
+            {'descriptions': [description.serialized for description in self.descriptions]})
         return serialized
 
     @classmethod
@@ -203,7 +210,61 @@ class DescriptionDefinition(Definition):
     @abstractmethod
     def get(self,context):
         # Returns a WiscBase Enumerable
-        pass
+        items = []
+
+        if self.operation == SetOperation.UNION:
+            for description in self.descriptions:
+                for key,value in context.state.items():
+                    if value in items:
+                        pass
+                    elif isinstance(Thing,value):
+                        if value.has_description(description):
+                            items.append(value)
+                    elif isinstance(WiscBase,value):
+                        if description.operation == PropertyOperation.EXISTS and description.property.name in value.keys:
+                            items.append(value)
+                        elif description.property.name in value.keys:
+                            attr = getattr(value,description.property.name)
+                            if description.operation.exec(attr,description.property.value):
+                                items.append(value)
+                    elif isinstance(dict,value):
+                        if description.operation == PropertyOperation.EXISTS and description.property.name in value.keys():
+                            items.append(value)
+                        elif description.property.name in value.keys():
+                            if description.operation.exec(value[description.property.name],description.property.value):
+                                items.append(value)
+
+        elif self.operation == SetOperation.Intersection:
+            items = [item for key,item in context.state.items()]
+
+            for description in self.descriptions:
+                to_remove = []
+                for value in items:
+                    should_remove = True
+                    if value in to_remove:
+                        should_remove = False
+                    elif isinstance(Thing,value):
+                        if not value.has_description(description):
+                            should_remove = False
+                    elif isinstance(WiscBase,value):
+                        should_remove = True
+                        if description.operation == PropertyOperation.EXISTS and description.property.name in value.keys:
+                            should_remove = False
+                        elif description.property.name in value.keys:
+                            attr = getattr(value,description.property.name)
+                            if description.operation.exec(attr,description.property.value):
+                                should_remove = False
+                    elif isinstance(dict,value):
+                        if description.operation == PropertyOperation.EXISTS and description.property.name in value.keys():
+                            should_remove = False
+                        elif description.property.name in value.keys():
+                            if description.operation.exec(value[description.property.name],description.property.value):
+                                should_remove = False
+                    if should_remove:
+                        to_remove.append(value)
+                items = [item for item in items if item not in to_remove]
+
+        return Enumerable(items=items)
 
 class MathDefinition(Definition):
     '''
@@ -232,4 +293,11 @@ class MathDefinition(Definition):
     @abstractmethod
     def get(self,context):
         # Returns a WiscBase Enumerable
+        self.math.exec()
         pass
+
+        '''
+        b = Math(2)
+        c = Math(3)
+        def = MathDefinition('a', Math(b, c, MathOperation.ADD))
+        '''

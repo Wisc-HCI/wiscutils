@@ -21,6 +21,25 @@ class PropertyOperation(Operation):
     LESS_THAN_OR_EQUALS = '<='
     EXISTS = 'exists'
 
+    def exec(self,prop1,prop2=None):
+        try:
+            if self == PropertyOperation.EQUALS:
+                return prop1 == prop2
+            elif self == PropertyOperation.NOT_EQUALS:
+                return prop1 != prop2
+            elif self == PropertyOperation.GREATER_THAN:
+                return prop1 > prop2
+            elif self == PropertyOperation.GREATER_THAN_OR_EQUALS:
+                return prop1 >= prop2
+            elif self == PropertyOperation.LESS_THAN:
+                return prop1 < prop2
+            elif self == PropertyOperation.LESS_THAN_OR_EQUALS:
+                return prop1 <= prop2
+            elif self == PropertyOperation.EXISTS:
+                return True
+        except TypeError:
+            return false
+
 class LTLOperation(Operation):
     NOT = '!'            # [Unary]: Inverts condition.
     NEXT = 'X'           # LTL [Unary]: Condition has to hold at the next state.
@@ -40,3 +59,7 @@ class MathOperation(Operation):
     MODULUS = '%'
     CARTESIAN_DISTANCE = 'cartesian_dist'
     ANGULAR_DISTANCE = 'angular_dist'
+
+class SetOperation(Operation):
+    UNION = 'U'
+    INTERSECTION = 'I'

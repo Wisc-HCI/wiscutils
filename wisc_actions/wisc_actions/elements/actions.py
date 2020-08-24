@@ -149,24 +149,6 @@ class Action(Primitive):
         # exit
         context.add(scope=scope)
 
-        # # First, get the parameters specified as arguments
-        # for parameter in self.parameters:
-        #     item = parameters[parameter]
-        #     # Check to see if the value is in the context space
-        #     if item in context:
-        #         # Retrieve the thing for that id item
-        #         context[parameter] = context[item]
-        #     else:
-        #         # Save the literal item value
-        #         context[parameter] = item
-        #
-        # # Next, define anything in the definitions.
-        # for definitions in self.definitions:
-        #     name = definition.name
-        #     context[name] = definition
-        #
-        # return context
-
     def resolve(self,context,parameters):
         '''
         Calling "resolve" has the effect of resolving the executable

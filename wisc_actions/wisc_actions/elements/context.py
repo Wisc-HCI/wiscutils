@@ -13,7 +13,7 @@ class Context(WiscBase):
     Runtime - calculated context and state of the program and its values
     (When serialized, reverts to state)
     '''
-    def __init__(self,initial):
+    def __init__(self,initial:dict):
         self.state = initial
         self.scopes = []
 

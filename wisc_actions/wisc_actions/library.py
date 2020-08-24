@@ -23,6 +23,8 @@ example_action_1a = {
                        'operation':'=='}]
 }
 
+{'term_a':{'term_a':1,'term_b':'some_value','operation':'-'},'term_b':2,'operation':'+'} # (1-some_value)+2
+
 example_action_1b = {
     '_id':'5f1b2eb44ad66e28348447a7',
     'name':'Grasp (Enforced Agent=UR3)',
