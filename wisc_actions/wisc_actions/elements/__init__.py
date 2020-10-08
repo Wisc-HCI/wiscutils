@@ -4,7 +4,7 @@ __all__ = ['Primitive','Action',
            'Call','Thing','Branch','Loop',
            'PropertyOperation','LTLOperation',
            'LiteralDefinition','PropertyDefinition','IndexDefinition','DescriptionDefinition',
-           'Position','Orientation','Pose','PoseTrajectory']
+           'Position','Orientation','Pose','PoseTrajectory','ModeTrajectory']
 
 from .base import WiscBase
 from .actions import Primitive, Action
@@ -14,4 +14,4 @@ from .calls import Call
 from .things import Thing, Property
 from .flow import Branch, Loop
 from .definitions import LiteralDefinition, PropertyDefinition, IndexDefinition, DescriptionDefinition
-from .structures import Position, Orientation, Pose, PoseTrajectory
+from .structures import Position, Orientation, Pose, PoseTrajectory, ModeTrajectory
