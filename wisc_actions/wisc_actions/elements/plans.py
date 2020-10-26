@@ -1,5 +1,4 @@
 from .base import WiscBase
-from .parse import parse
 from .actions import Action, Primitive
 from .conditions import Condition, PropertyCondition, UnaryLTLCondition, BinaryLTLCondition
 from .things import Thing, Property
@@ -103,12 +102,12 @@ class PlanningProgram(Program):
         return instance, domain
 
     @classmethod
-    def load(cls,serialized:dict):
+    def load(cls,serialized:dict,context:list):
         id = serialized['_id'] if '_id' in serialized.keys() else None
-        actions = parse([Action,Primitive],serialized['actions'])
-        initial = [Thing.load(content) for content in serialized['initial']]
-        goal = [Thing.load(content) for content in serialized['goal']]
-        rules = [parse([Condition,UnaryLTLCondition,BinaryLTLCondition],content) for content in serialized['rules']]
+        actions = WiscBase.parse([Action,Primitive],serialized['actions'])
+        initial = [Thing.load(content,context) for content in serialized['initial']]
+        goal = [Thing.load(content,context) for content in serialized['goal']]
+        rules = [WiscBase.parse([Condition,UnaryLTLCondition,BinaryLTLCondition],content,context) for content in serialized['rules']]
         return PlanningProgram(name=serialized['name'],actions=actions,initial=initial,goal=goal,rules=rules,_id=id)
 
     @property
@@ -138,12 +137,12 @@ class ImperativeProgram(Program):
         self.rules = rules
 
     @classmethod
-    def load(cls,serialized):
+    def load(cls,serialized:dict,context:list):
         id = serialized['_id'] if '_id' in serialized.keys() else None
-        actions = parse([Action,Primitive],serialized['actions'])
+        actions = WiscBase.parse([Action,Primitive],serialized['actions'],context)
         initial = [Thing.load(content) for content in serialized['initial']]
         main = serialized['main']
-        rules = [parse([Condition,UnaryLTLCondition,BinaryLTLCondition],content) for content in serialized['rules']]
+        rules = [WiscBase.parse([Condition,UnaryLTLCondition,BinaryLTLCondition],content,context) for content in serialized['rules']]
         return ImperativeProgram(name=serialized['name'],actions=actions,initial=initial,main=main,_id=id)
 
     @property
@@ -189,16 +188,16 @@ class AutomataProgram(Program):
         self.rules = rules
 
     @classmethod
-    def load(cls,serialized):
+    def load(cls,serialized:dict,context:list):
         id = serialized['_id'] if '_id' in serialized.keys() else None
         name = serialized['name']
-        actions = parse([Action,Primitive],serialized['actions'])
+        actions = WiscBase.parse([Action,Primitive],serialized['actions'],context)
         # TODO: Decide on whether we want to structure automata as states and transitions
         states = serialized['states']
         transitions = serialized['transitions']
         initial_state = serialized['initial_state']
         end_states = serialized['end_states']
-        rules = [parse([Condition,UnaryLTLCondition,BinaryLTLCondition],content) for content in serialized['rules']]
+        rules = [WiscBase.parse([Condition,UnaryLTLCondition,BinaryLTLCondition],content,context) for content in serialized['rules']]
         return AutomataProgram(name,actions,states,transitions,initial_state,end_states,rules,id)
 
     @classmethod
@@ -218,5 +217,5 @@ class ExecutableProgram(Program):
         super(ExecutableProgram,self).__init__(name,actions,initial=[],_id=_id)
 
     @classmethod
-    def load(cls,serialized):
+    def load(cls,serialized:dict,context:list):
         return ExecutableProgram()

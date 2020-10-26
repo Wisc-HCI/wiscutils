@@ -17,7 +17,6 @@ except:
     HAS_ROS = False
 from abc import abstractmethod
 from .base import WiscBase
-from .parse import parse
 
 class Position(WiscBase):
 
@@ -59,7 +58,7 @@ class Position(WiscBase):
         return Position(x=point.x,y=point.y,z=point.z)
 
     @classmethod
-    def load(cls,data):
+    def load(cls,data,context=[]):
         return Position(data['x'],data['y'],data['z'])
 
     def distance_to(self,other):
@@ -122,7 +121,7 @@ class Orientation(pyQuaternion,WiscBase):
         return Orientation(w=dict['w'],x=dict['z'],y=dict['y'],z=dict['z'])
 
     @classmethod
-    def load(self,dict):
+    def load(self,dict,context=[]):
         if set(('r','p','y')).issubset(set(dict.keys())):
             return from_euler_dict(dict)
         elif set(('w','x','y','z')).issubset(set(dict.keys())):
@@ -187,7 +186,7 @@ class Pose(WiscBase):
         return self.dict
 
     @classmethod
-    def load(cls,data):
+    def load(cls,data,context=[]):
         return Pose(Position.load(data['position']),Orientation.load(data['orientation']))
 
 class Enumerable(WiscBase):
@@ -215,9 +214,9 @@ class Enumerable(WiscBase):
         return {'items':[self.serialize(item) for item in self.items]}
 
     @classmethod
-    def load(cls,data):
+    def load(cls,data,context=[]):
         # Note, this probably shouldn't be loaded.
-        return Enumerable([parse([Position,Orientation,Pose],item) for item in data['items']])
+        return Enumerable([WiscBase.parse([Position,Orientation,Pose],item,context) for item in data['items']])
 
 
 class Vector(WiscBase):
@@ -245,7 +244,7 @@ class Trajectory(WiscBase):
         return {'kind':self.kind,'circuit':self.circuit,'wps':[self.serialize(item) for item in self.wps]}
 
     @classmethod
-    def load(cls,data):
+    def load(cls,data,context=[]):
         # Note, this probably shouldn't be loaded.
         return Trajectory([])
 

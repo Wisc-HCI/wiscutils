@@ -21,7 +21,7 @@ class PropertyOperation(Operation):
     LESS_THAN_OR_EQUALS = '<='
     EXISTS = 'exists'
 
-    def exec(self,prop1,prop2=None):
+    def execute(self,prop1,prop2=None):
         try:
             if self == PropertyOperation.EQUALS:
                 return prop1 == prop2

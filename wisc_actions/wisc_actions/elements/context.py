@@ -1,12 +1,6 @@
 from .base import WiscBase
-from .things import Reference
-
-# class Redirect(object):
-#     '''
-#     Performs linkages from the scopes to other scopes or the state
-#     '''
-#     def __init__(self,object):
-#         self.object
+from .things import Term,Thing
+from .structures import Position, Orientation, Pose
 
 class Context(WiscBase):
     '''
@@ -23,7 +17,7 @@ class Context(WiscBase):
     def pop(self):
         self.scopes.pop()
 
-    def get(self,reference:Reference,level:Int=0):
+    def get(self,reference:Term,level:int=0):
         # Search in the lowermost scope for the object,
         # and if it is not found, seach in the state.
         if level < len(self.scopes):
@@ -31,26 +25,42 @@ class Context(WiscBase):
         else:
             scope = self.state
 
-        if reference in scope:
-            if isinstance(Reference,scope[reference]):
+        if reference.name in scope:
+            if isinstance(scope[reference.name],Term):
                 return self.get(scope[reference],level+1)
             else:
-                return scope[reference]
-        elif reference in self.state:
-            return scope[reference]
+                return scope[reference.name]
+        elif reference.name in self.state:
+            return scope[reference.name]
 
         return None
 
-    def set(self,reference:Reference,node):
-        #TODO
-        pass
+    def set(self,reference:Term,node:WiscBase,level:int=0):
+        # Search in the lowermost scope for the object,
+        # and if it is not found, seach in the state.
+        if level < len(self.scopes):
+            scope = self.scopes[len(self.scopes)-level]
+        else:
+            scope = self.state
 
-        # for level in reversed(self.scopes):
-        #     if varname in level.keys():
-        #         level[varname] = node
-        #         return
-        # # Not already defined, add to the current scope
-        # self.scopes[-1][varname] = node
+        if reference.name in scope:
+            if isinstance(scope[reference.name],Term):
+                self.set(scope[reference],node,level+1)
+            else:
+                scope[reference.name] = node
+        elif reference.name in self.state:
+            scope[reference.name] = node
+        else:
+            scope[reference.name] = node
 
     def __repr__(self):
         return str(self.scopes)
+
+    def load(self, serialized: dict, context: list = []):
+        [WiscBase.parse(classes,content,context) for conent in serialized]
+        initial = {key:WiscBase.parse([Thing,Term,Position,Orientation,Pose],value,context) for key,value in serialized.items()}
+        return Context(initial)
+
+    @property
+    def serialized(self):
+        return {key:self.serialize(value) for key,value in self.state.items()}

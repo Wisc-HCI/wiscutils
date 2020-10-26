@@ -1,6 +1,5 @@
 from bson.objectid import ObjectId
 from .base import WiscBase
-from .parse import parse
 from .calls import Call
 from .flow import Branch, Loop
 from .definitions import Definition, LiteralDefinition, PropertyDefinition, IndexDefinition, DescriptionDefinition
@@ -27,7 +26,7 @@ class Primitive(WiscBase):
                 'parameters': self.serialize(self.parameters)}
 
     @classmethod
-    def load(cls, serialized: dict):
+    def load(cls, serialized: dict, context: list):
         return Primitive(**serialized)
 
     def create_call(self, parameters: dict) -> Call:
@@ -52,7 +51,7 @@ class Action(Primitive):
         self.additional_postconditions = postconditions
 
     @classmethod
-    def load(cls, serialized):
+    def load(cls, serialized: dict, context: list):
         id = serialized['_id'] if '_id' in serialized.keys() else None
         name = serialized['name']
         parameters = serialized['parameters']
@@ -61,16 +60,16 @@ class Action(Primitive):
         preconditions = []
         postconditions = []
         for serial_subaction in serialized['subactions']:
-            subactions.append(parse([Call, Loop, Branch], serial_subaction))
+            subactions.append(WiscBase.parse([Call, Loop, Branch], serial_subaction))
         for serial_definition in serialized['definitions']:
-            definitions.append(parse(
-                [LiteralDefinition, PropertyDefinition, IndexDefinition], serial_definition))
+            definitions.append(WiscBase.parse(
+                [LiteralDefinition, PropertyDefinition, IndexDefinition], serial_definition),context)
         for serial_precondition in serialized['preconditions']:
             preconditions.append(
-                parse([Condition, UnaryLTLCondition, BinaryLTLCondition], serial_precondition))
+                WiscBase.parse([Condition, UnaryLTLCondition, BinaryLTLCondition], serial_precondition))
         for serial_postcondition in serialized['postconditions']:
             postconditions.append(
-                parse([Condition, UnaryLTLCondition, BinaryLTLCondition], serial_postcondition))
+                WiscBase.parse([Condition, UnaryLTLCondition, BinaryLTLCondition], serial_postcondition))
         return Action(_id=id,
                       name=name,
                       parameters=parameters,
@@ -172,7 +171,7 @@ class Action(Primitive):
         self.definitions.append(definition)
 
     def create_definition(self, **kwargs) -> Definition:
-        definition = parse([LiteralDefinition, PropertyDefinition,
+        definition = WiscBase.parse([LiteralDefinition, PropertyDefinition,
                             IndexDefinition, DescriptionDefinition], kwargs)
         self.add_definition(definition)
         return definition
@@ -181,7 +180,7 @@ class Action(Primitive):
         self.additional_preconditions.append(condition)
 
     def create_precondition(self, **kwargs):
-        precondition = parse(
+        precondition = WiscBase.parse(
             [PropertyCondition, UnaryLTLCondition, BinaryLTLCondition], kwargs)
         self.add_precondition(precondition)
         return precondition
@@ -190,7 +189,7 @@ class Action(Primitive):
         self.additional_postconditions.append(condition)
 
     def create_postcondition(self, **kwargs):
-        postcondition = parse(
+        postcondition = WiscBase.parse(
             [PropertyCondition, UnaryLTLCondition, BinaryLTLCondition], kwargs)
         self.add_postcondition(postcondition)
         return postcondition

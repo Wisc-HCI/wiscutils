@@ -1,5 +1,4 @@
 from .base import WiscBase
-from .parse import parse
 from .things import Thing
 from .math import Math
 from .structures import Position, Orientation, Pose
@@ -40,7 +39,7 @@ class Definition(WiscBase):
         return {'name': self.name}
 
     @classmethod
-    def load(cls, serialized):
+    def load(cls, serialized: dict, context: list):
         return Definition(serialized['name'])
 
 
@@ -71,8 +70,8 @@ class LiteralDefinition(Definition):
         return serialized
 
     @classmethod
-    def load(cls, serialized):
-        value = parse([Thing, Position, Orientation, Pose], serialized)
+    def load(cls, serialized: dict, context: list):
+        value = WiscBase.parse([Thing, Position, Orientation, Pose], serialized, context)
         return LiteralDefinition(name=serialized['name'], value=value)
 
 
@@ -106,13 +105,13 @@ class PropertyDefinition(Definition):
         return serialized
 
     @classmethod
-    def load(cls, serialized):
+    def load(cls, serialized: dict, context: list):
         fallback = serialized['fallback'] if 'fallback' in serialized.keys(
         ) else None
         return PropertyDefinition(name=serialized['name'],
                                   item=serialized['item'],
                                   property=serialized['property'],
-                                  fallback=parse([Thing, Position, Orientation, Pose], fallback))
+                                  fallback=WiscBase.parse([Thing, Position, Orientation, Pose], fallback))
 
     @abstractmethod
     def get(self,context):
@@ -166,7 +165,7 @@ class IndexDefinition(Definition):
         return serialized
 
     @classmethod
-    def load(cls, serialized):
+    def load(cls, serialized: dict, context: list):
         return IndexDefinition(name=serialized['name'],
                                item=serialized['item'],
                                property=serialized['index'])
@@ -203,9 +202,9 @@ class DescriptionDefinition(Definition):
         return serialized
 
     @classmethod
-    def load(cls, serialized):
+    def load(cls, serialized: dict, context: list):
         return DescriptionDefinition(name=serialized['name'],
-                                     descriptions=[Description.load(content) for content in serialized['descriptions']])
+                                     descriptions=[Description.load(content,context) for content in serialized['descriptions']])
 
     @abstractmethod
     def get(self,context):
@@ -225,13 +224,13 @@ class DescriptionDefinition(Definition):
                             items.append(value)
                         elif description.property.name in value.keys:
                             attr = getattr(value,description.property.name)
-                            if description.operation.exec(attr,description.property.value):
+                            if description.operation.execute(attr,description.property.value):
                                 items.append(value)
                     elif isinstance(dict,value):
                         if description.operation == PropertyOperation.EXISTS and description.property.name in value.keys():
                             items.append(value)
                         elif description.property.name in value.keys():
-                            if description.operation.exec(value[description.property.name],description.property.value):
+                            if description.operation.execute(value[description.property.name],description.property.value):
                                 items.append(value)
 
         elif self.operation == SetOperation.Intersection:
@@ -252,13 +251,13 @@ class DescriptionDefinition(Definition):
                             should_remove = False
                         elif description.property.name in value.keys:
                             attr = getattr(value,description.property.name)
-                            if description.operation.exec(attr,description.property.value):
+                            if description.operation.execute(attr,description.property.value):
                                 should_remove = False
                     elif isinstance(dict,value):
                         if description.operation == PropertyOperation.EXISTS and description.property.name in value.keys():
                             should_remove = False
                         elif description.property.name in value.keys():
-                            if description.operation.exec(value[description.property.name],description.property.value):
+                            if description.operation.execute(value[description.property.name],description.property.value):
                                 should_remove = False
                     if should_remove:
                         to_remove.append(value)
@@ -286,14 +285,14 @@ class MathDefinition(Definition):
         return serialized
 
     @classmethod
-    def load(cls, serialized):
+    def load(cls, serialized: dict, context: list):
         return MathDefinition(name=serialized['name'],
-                              math=Math.load(serialized['math']))
+                              math=Math.load(serialized['math'],context))
 
     @abstractmethod
     def get(self,context):
         # Returns a WiscBase Enumerable
-        self.math.exec()
+        self.math.execute()
         pass
 
         '''

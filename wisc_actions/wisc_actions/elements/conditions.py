@@ -1,5 +1,4 @@
 from .base import WiscBase
-from .parse import parse
 from .things import Property
 from .operations import Operation, PropertyOperation, LTLOperation
 
@@ -25,9 +24,9 @@ class Description(Condition):
         self.operation = operation
 
     @classmethod
-    def load(cls,serialized):
-        return Description(property=Property.load(serialized['property']),
-                           operation=Operation.load(serialized['operation']))
+    def load(cls, serialized: dict, context: list):
+        return Description(property=Property.load(serialized['property'],context),
+                           operation=Operation.load(serialized['operation'],context))
 
     @property
     def serialized(self):
@@ -48,10 +47,10 @@ class PropertyCondition(Condition):
         self.property = property
 
     @classmethod
-    def load(cls,serialized):
+    def load(cls, serialized: dict, context: list):
         return PropertyCondition(thing=serialized['thing'],
-                                 property=parse([Property],serialized['property']),
-                                 operation=parse([Operation,LTLOperation],serialized['operation']))
+                                 property=parse([Property],serialized['property'],context),
+                                 operation=parse([Operation,LTLOperation],serialized['operation'],context))
 
     @property
     def serialized(self):
@@ -84,7 +83,7 @@ class UnaryLTLCondition(Condition):
 
     @classmethod
     def load(cls,serialized):
-        return UnaryCondition(condition=parse([Condition,UnaryLTLCondition,BinaryLTLCondition],serialized['condition']),
+        return UnaryCondition(condition=WiscBase.parse([Condition,UnaryLTLCondition,BinaryLTLCondition],serialized['condition']),
                               operation=LTLOperation.load(serialized['operation']))
 
     @property
@@ -107,8 +106,8 @@ class BinaryLTLCondition(Condition):
 
     @classmethod
     def load(cls,serialized):
-        return BinaryCondition(condition_a=parse([PropertyCondition,UnaryLTLCondition,BinaryLTLCondition],serialized['condition_a']),
-                               condition_b=parse([PropertyCondition,UnaryLTLCondition,BinaryLTLCondition],serialized['condition_b']),
+        return BinaryCondition(condition_a=WiscBase.parse([PropertyCondition,UnaryLTLCondition,BinaryLTLCondition],serialized['condition_a']),
+                               condition_b=WiscBase.parse([PropertyCondition,UnaryLTLCondition,BinaryLTLCondition],serialized['condition_b']),
                                operation=LTLOperation.load(serialized['operation']))
 
     @property

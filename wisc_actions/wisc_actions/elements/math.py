@@ -25,7 +25,7 @@ class Math(WiscBase):
         self.operation = operation
 
     @classmethod
-    def load(cls,serialized):
+    def load(cls, serialized: dict, context: list):
         '''
         TODO: handle whatever context-grabbing implementation we use here for
         non-math terms.
@@ -36,22 +36,84 @@ class Math(WiscBase):
 
     @property
     def serialized(self):
-        return {'term_a':self.serialize(self.term_a),
-                'term_b':self.serialize(self.term_b),
-                'operation':self.serialize(self.operation)
+        return {'term_a':self.term_a.serialized,
+                'term_b':self.term_b.serialized,
+                'operation':self.operation.serialized
                 }
 
-    def exec(self,context):
+    def execute(self,context):
         lhs = Math.resolve(self.term_a, context)
         rhs = Math.resolve(self.term_b, context)
         return EXECUTION[self.operation](lhs, rhs)
 
     @classmethod
     def resolve(self,term,context):
-        if isinstance(str,term):
-            return context.get(term)
-        elif isinstance(int,term) or isinstance(float,term):
+        if isinstance(term,(int,float)):
             return term
+        elif isinstance(term,Math):
+            return term.execute(context)
+        elif isinstance(term,WiscBase):
+            return context.get(term)
+
+    def __add__(self,other):
+        if isinstance(other,(Term,Math,int,float)):
+            return Math(self,other,MathOperation.ADD)
+        else:
+            return None
+
+    def __sub__(self,other):
+        if isinstance(other,(Term,Math,int,float)):
+            return Math(self,other,MathOperation.SUBTRACT)
+        else:
+            return None
+
+    def __mul__(self,other):
+        if isinstance(other,(Term,Math,int,float)):
+            return Math(self,other,MathOperation.MULTIPLY)
+        else:
+            return None
+
+    def __truediv__(self,other):
+        if isinstance(other,(Term,Math,int,float)):
+            return Math(self,other,MathOperation.DIVIDE)
+        else:
+            return None
+
+    def __mod__(self,other):
+        if isinstance(other,(Term,Math,int,float)):
+            return Math(self,other,MathOperation.MODULUS)
+        else:
+            return None
+
+    def __lt__(self,other):
+        if isinstance(other,(Term,Math,int,float)):
+            return Math(self,other,PropertyOperation.LESS_THAN)
+        else:
+            return None
+
+    def __le__(self,other):
+        if isinstance(other,(Term,Math,int,float)):
+            return Math(self,other,PropertyOperation.LESS_THAN_OR_EQUALS)
+        else:
+            return None
+
+    def __gt__(self,other):
+        if isinstance(other,(Term,Math,int,float)):
+            return Math(self,other,PropertyOperation.GREATER_THAN)
+        else:
+            return None
+
+    def __ge__(self,other):
+        if isinstance(other,(Term,Math,int,float)):
+            return Math(self,other,PropertyOperation.GREATER_THAN_OR_EQUALS)
+        else:
+            return None
+
+    def __eq__(self,other):
+        if isinstance(other,(Term,Math,int,float)):
+            return Math(self,other,PropertyOperation.EQUALS)
+        else:
+            return None
 
 '''
 b = Math(2)

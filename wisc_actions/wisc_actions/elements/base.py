@@ -14,7 +14,7 @@ class WiscBase(ABC):
 
     @classmethod
     @abstractmethod
-    def load(cls,serialized):
+    def load(cls, serialized: dict, context: list):
         return WiscBase()
 
     @classmethod
@@ -33,13 +33,26 @@ class WiscBase(ABC):
         if isinstance(item,dict):
             return {k:cls.serialize(v) for k,v in item.items()}
         # If it a basic type, return it
-        if isinstance(item,int) or isinstance(item,float) or isinstance(item,str) or item == None:
+        if isinstance(item,(int,float,str)) or item == None:
             return item
 
         # Serialization method not found.
         warnings.warn('Serialization not found for item of type {0}. Returning "None"'.format(type(item)),Warning)
 
         return None
+
+    @classmethod
+    def parse(classes, serialized: dict, context: list):
+        if isinstance(serialized,list):
+            return [WiscBase.parse(classes,content,context) for conent in serialized]
+        elif isinstance(serialized,int) or isinstance(serialized,float) or isinstance(serialized,str) or serialized == None:
+            return serialized
+        elif isinstance(serialized,dict):
+            for cls in classes:
+                for keyset in cls.keys:
+                    if keyset == set(serialized.keys()):
+                        return cls.load(serialized,context)
+        return serialized
 
     def __repr__(self):
         return pprint.pformat(self.serialized)

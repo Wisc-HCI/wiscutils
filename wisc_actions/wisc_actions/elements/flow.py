@@ -21,8 +21,8 @@ class Branch(WiscBase):
                 'calls':self.serialize(self.calls)}
 
     @classmethod
-    def load(self,serialized):
-        return Branch(calls=[Call.load(content) for content in serialized['calls']])
+    def load(self, serialized: dict, context: list):
+        return Branch(calls=[Call.load(content,context) for content in serialized['calls']])
 
     @property
     def preconditions(self):
@@ -76,7 +76,7 @@ class Loop(WiscBase):
                 'call':self.call.serialized}
 
     @classmethod
-    def load(self,serialized):
+    def load(self, serialized: dict, context: list):
         return Loop(call=serialized['call'])
 
     @property
