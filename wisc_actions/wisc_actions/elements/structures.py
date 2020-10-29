@@ -20,7 +20,7 @@ from .base import WiscBase
 
 class Position(WiscBase):
 
-    keys = [set(('x','y','z'))]
+    keys = [{'x','y','z'}]
 
     def __init__(self,x,y,z):
         self.x = x
@@ -69,7 +69,7 @@ class Position(WiscBase):
 
 class Orientation(pyQuaternion,WiscBase):
 
-    keys = [set(('r','p','y')),set(('w','x','y','z'))]
+    keys = [{'r','p','y'},{'w','x','y','z'}]
 
     @property
     def ros_quaternion(self):
@@ -122,9 +122,9 @@ class Orientation(pyQuaternion,WiscBase):
 
     @classmethod
     def load(self,dict,context=[]):
-        if set(('r','p','y')).issubset(set(dict.keys())):
+        if {'r','p','y'}.issubset(set(dict.keys())):
             return from_euler_dict(dict)
-        elif set(('w','x','y','z')).issubset(set(dict.keys())):
+        elif {'w','x','y','z'}.issubset(set(dict.keys())):
             return from_dict(dict)
 
 
@@ -133,7 +133,7 @@ class Orientation(pyQuaternion,WiscBase):
 
 class Pose(WiscBase):
 
-    keys = [set(('position','orientation'))]
+    keys = [{'position','orientation'}]
 
     def __init__(self,position,orientation):
         self.position = position
@@ -191,7 +191,7 @@ class Pose(WiscBase):
 
 class Enumerable(WiscBase):
 
-    keys = [set(('items'))]
+    keys = [{'items'}]
 
     def __init__(self,items):
         self.items = items
@@ -227,7 +227,7 @@ class Mesh(WiscBase):
 
 class Trajectory(WiscBase):
 
-    keys = [set(('kind','wps','circuit'))]
+    keys = [{'kind','wps','circuit'}]
 
     def __init__(self,waypoints,kind=3,method='univariate_spline',circuit=False,min_value=None,max_value=None):
         self.wps = waypoints

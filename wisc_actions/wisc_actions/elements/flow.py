@@ -10,7 +10,7 @@ class Branch(WiscBase):
         - [Required] A set of calls that get checked consecutively
     '''
 
-    keys = [set(('flow','calls'))]
+    keys = [{'flow','calls'}]
 
     def __init__(self,calls=[]):
         self.calls = calls
@@ -65,7 +65,7 @@ class Loop(WiscBase):
         - [Required] An action call to execute on each item
     '''
 
-    keys = [set(('flow','call'))]
+    keys = [{'flow','call'}]
 
     def __init__(self,loopable,item,call):
         self.call = call

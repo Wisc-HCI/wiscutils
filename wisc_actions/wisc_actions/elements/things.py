@@ -1,8 +1,7 @@
 from bson.objectid import ObjectId
 from .base import WiscBase
 from .structures import Position, Orientation, Pose
-from .operations import MathOperation, PropertyOperation
-from .math import Math
+from .operations import Operator, Operation
 from typing import Any, List, Dict
 
 
@@ -10,7 +9,7 @@ class Term(WiscBase):
     '''
     Wrapper for handling references to things in the space
     '''
-    keys = []
+    keys = [{'name'}]
 
     def __init__(self,name:str):
         self.name = name
@@ -29,75 +28,74 @@ class Term(WiscBase):
         return self.name
 
     def __add__(self,other):
-        if isinstance(other,(Term,Math,int,float)):
-            return Math(self,other,MathOperation.ADD)
+        if isinstance(other,(Term,Operation,int,float)):
+            return Operation(self,other,Operator.ADD)
         else:
             return None
 
     def __sub__(self,other):
-        if isinstance(other,(Term,Math,int,float)):
-            return Math(self,other,MathOperation.SUBTRACT)
+        if isinstance(other,(Term,Operation,int,float)):
+            return Operation(self,other,Operator.SUBTRACT)
         else:
             return None
 
     def __mul__(self,other):
-        if isinstance(other,(Term,Math,int,float)):
-            return Math(self,other,MathOperation.MULTIPLY)
+        if isinstance(other,(Term,Operation,int,float)):
+            return Operation(self,other,Operator.MULTIPLY)
         else:
             return None
 
     def __truediv__(self,other):
-        if isinstance(other,(Term,Math,int,float)):
-            return Math(self,other,MathOperation.DIVIDE)
+        if isinstance(other,(Term,Operation,int,float)):
+            return Operation(self,other,Operator.DIVIDE)
         else:
             return None
 
     def __mod__(self,other):
-        if isinstance(other,(Term,Math,int,float)):
-            return Math(self,other,MathOperation.MODULUS)
+        if isinstance(other,(Term,Operation,int,float)):
+            return Operation(self,other,Operator.MODULUS)
         else:
             return None
 
     def __lt__(self,other):
-        if isinstance(other,(Term,Math,int,float)):
-            return Math(self,other,PropertyOperation.LESS_THAN)
+        if isinstance(other,(Term,Operation,int,float)):
+            return Operation(self,other,Operator.LESS_THAN)
         else:
             return None
 
     def __le__(self,other):
-        if isinstance(other,(Term,Math,int,float)):
-            return Math(self,other,PropertyOperation.LESS_THAN_OR_EQUALS)
+        if isinstance(other,(Term,Operation,int,float)):
+            return Operation(self,other,Operator.LESS_THAN_OR_EQUALS)
         else:
             return None
 
     def __gt__(self,other):
-        if isinstance(other,(Term,Math,int,float)):
-            return Math(self,other,PropertyOperation.GREATER_THAN)
+        if isinstance(other,(Term,Operation,int,float)):
+            return Operation(self,other,Operator.GREATER_THAN)
         else:
             return None
 
     def __ge__(self,other):
-        if isinstance(other,(Term,Math,int,float)):
-            return Math(self,other,PropertyOperation.GREATER_THAN_OR_EQUALS)
+        if isinstance(other,(Term,Operation,int,float)):
+            return Operation(self,other,Operator.GREATER_THAN_OR_EQUALS)
         else:
             return None
 
     def __eq__(self,other):
-        if isinstance(other,(Term,Math,int,float)):
-            return Math(self,other,PropertyOperation.EQUALS)
+        if isinstance(other,(Term,Operation,int,float)):
+            return Operation(self,other,Operator.EQUALS)
         else:
             return None
 
     def execute(self,plan,context):
         return context.get(self.name)
 
-
 class Property(WiscBase):
     '''
     A generic container for specifying object properties.
     '''
 
-    keys = [set(('name','value'))]
+    keys = [{'name','value'}]
 
     def __init__(self,name='property',value=None):
         self.name = name
@@ -123,7 +121,7 @@ class Prototype(WiscBase):
         - parents (required): A list of parent prototypes to inherit from.
         - properties (required): a sequence of Property objects or serialized properties.
     '''
-    keys = [set(('name','properties','parents'))]
+    keys = [{'name','properties','parents'}]
 
     def __init__(self,name:str,parents:List['Prototype'],properties:List[Property]):
         self.name = name
@@ -156,6 +154,8 @@ class Prototype(WiscBase):
             for parent_parent in parent.parents:
                 if parent_parent not in parents:
                     parents.append(parent_parent)
+            if parent not in parents:
+                parents.append(parent)
         return parents
 
     @property
@@ -169,7 +169,13 @@ class Prototype(WiscBase):
         return [property for name,property in properties.items()]
 
     def add_property(self,property:Property):
-        self._properties.append(property)
+        found = False
+        for idx,prop in enumerate(self._properties):
+            if prop.name == property.name:
+                self._properties[idx] = property
+                found = True
+        if not found:
+            self._properties.append(property)
 
     def has_property(self,property_name:str) -> bool:
         for property in self.properties:
@@ -184,7 +190,7 @@ class Prototype(WiscBase):
 
     def has_description(self,description:'Description') -> bool:
         if self.has_property(description.property.name):
-            if description.operation == PropertyOperation.EXISTS:
+            if description.operation == Operator.EXISTS:
                 return self.has_property(description.property.name)
             prop = self.get_property(description.property.name)
             return description.operation.execute(prop.value,description.property.value)
@@ -200,9 +206,9 @@ class Prototype(WiscBase):
         thing = Thing(name,self,properties)
         return thing
 
-    def create_prototype(self,name,properties:list) -> 'Prototype':
-        prototype = Prototype(name,)
-
+    def create_prototype(self,name) -> 'Prototype':
+        prototype = Prototype(name,[self],[])
+        return prototype
 
 class Thing(Prototype):
     '''
@@ -213,10 +219,11 @@ class Thing(Prototype):
         - properties (required): a sequence of Property objects or serialized properties.
     '''
 
-    keys = [set(('name','properties','prototype'))]
+    keys = [{'name','properties','prototype'}]
 
     def __init__(self,name:str,prototype:Prototype,properties:List[Property],_id=None):
-        super(Thing,self).__init__(self,name,[prototype],properties,_id)
+        super(Thing,self).__init__(name,[prototype],properties)
+        self.id = ObjectId(_id)
 
     def create_thing(self,name:str,properties:list) -> 'Thing':
         raise NotImplementedError
@@ -227,6 +234,10 @@ class Thing(Prototype):
     @property
     def prototype(self):
         return self.parents[0]
+
+    @prototype.setter
+    def prototype(self,prototype):
+        self.parents[0] = prototype
 
     @property
     def serialized(self):

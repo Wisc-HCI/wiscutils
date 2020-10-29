@@ -5,7 +5,7 @@ class Call(WiscBase):
     Container for specifying a call to another action or primitive.
     '''
 
-    keys = [set(('id','parameters'))]
+    keys = [{'id','parameters'}]
 
     def __init__(self,id,parameters:dict):
         self.id = id

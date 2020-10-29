@@ -1,48 +1,57 @@
 from .base import WiscBase
 from .things import Property
-from .operations import Operation, PropertyOperation, LTLOperation
+from .operations import Operator, Operation
 
 class Condition(WiscBase):
     '''
     Encoding for logic
     '''
 
-    keys = [set(('operation'))]
+    keys = [{'operator'}]
 
-    def __init__(self,operation:Operation):
-        self.operation = operation
+    def __init__(self,operator:Operator):
+        self.operator = operator
 
 class Description(Condition):
     '''
     Encoding for thing-agnostic property attributes.
     '''
-    keys = [set(('property','operation'))]
+    keys = [{'property','operator'}]
 
-    def __init__(self,property:Property,operation:PropertyOperation):
-        super(Description,self).__init__(operation)
+    def __init__(self,property:Property,operator:Operator):
+        super(Description,self).__init__(operator)
         self.property = property
-        self.operation = operation
+        self.operator = operator
 
     @classmethod
     def load(cls, serialized: dict, context: list):
         return Description(property=Property.load(serialized['property'],context),
-                           operation=Operation.load(serialized['operation'],context))
+                           operator=Operator.load(serialized['operator'],context))
 
     @property
     def serialized(self):
         return {'property':self.property.serialized,
-                'operation':self.operation.serialized
+                'operator':self.operator.serialized
                 }
+
+    def observe(self):
+        return Operation(self,None,Operator.OBSERVE)
+
+    def union(self,other):
+        return Operation(self.observe(),other.observe(),Operator.UNION)
+
+    def intersection(self,other):
+        return Operation(self.observe(),other.observe(),Operator.INTERSECTION)
 
 class PropertyCondition(Condition):
     '''
     Encoding for thing-property comparison conditions.
     '''
 
-    keys = [set(('thing','property','operation'))]
+    keys = [{'thing','property','operator'}]
 
-    def __init__(self,thing:str,property:Property,operation:Operation):
-        super(PropertyCondition,self).__init__(operation)
+    def __init__(self,thing:str,property:Property,operator:Operator):
+        super(PropertyCondition,self).__init__(operator)
         self.thing = thing
         self.property = property
 
@@ -50,13 +59,13 @@ class PropertyCondition(Condition):
     def load(cls, serialized: dict, context: list):
         return PropertyCondition(thing=serialized['thing'],
                                  property=parse([Property],serialized['property'],context),
-                                 operation=parse([Operation,LTLOperation],serialized['operation'],context))
+                                 operator=parse([Operator],serialized['operator'],context))
 
     @property
     def serialized(self):
         return {'thing':self.thing,
                 'property':self.property.serialized,
-                'operation':self.operation.serialized
+                'operator':self.operator.serialized
         }
 
     def evaluate(self,state):
@@ -73,48 +82,48 @@ class PropertyCondition(Condition):
 
 class UnaryLTLCondition(Condition):
     '''
-    Encoding for unary LTL conditions. Consists of a condition and a unary LTL operation.
+    Encoding for unary LTL conditions. Consists of a condition and a unary LTL operator.
     '''
-    keys = [set(('condition','operation'))]
+    keys = [{'condition','operator'}]
 
-    def __init__(self,condition,operation):
+    def __init__(self,condition,operator):
         self.condition = condition
-        self.operation = operation
+        self.operator = operator
 
     @classmethod
     def load(cls,serialized):
         return UnaryCondition(condition=WiscBase.parse([Condition,UnaryLTLCondition,BinaryLTLCondition],serialized['condition']),
-                              operation=LTLOperation.load(serialized['operation']))
+                              operator=Operator.load(serialized['operator']))
 
     @property
     def serialized(self):
         return {'condition':self.condition.serialized,
-                'operation':self.operation.serialized
+                'operator':self.operator.serialized
                 }
 
 class BinaryLTLCondition(Condition):
     '''
-    Encoding for binary LTL conditions. Consists of two conditions (a/b) and a binary LTL operation.
+    Encoding for binary LTL conditions. Consists of two conditions (a/b) and a binary LTL operator.
     '''
 
-    keys = [set(('condition_a','condition_b','operation'))]
+    keys = [{'condition_a','condition_b','operator'}]
 
-    def __init__(self,condition_a,condition_b,operation):
+    def __init__(self,condition_a,condition_b,operator):
         self.condition_a = condition_a
         self.condition_b = condition_b
-        self.operation = operation
+        self.operator = operator
 
     @classmethod
     def load(cls,serialized):
         return BinaryCondition(condition_a=WiscBase.parse([PropertyCondition,UnaryLTLCondition,BinaryLTLCondition],serialized['condition_a']),
                                condition_b=WiscBase.parse([PropertyCondition,UnaryLTLCondition,BinaryLTLCondition],serialized['condition_b']),
-                               operation=LTLOperation.load(serialized['operation']))
+                               operator=Operator.load(serialized['operator']))
 
     @property
     def serialized(self):
         return {'condition_a':self.condition_a.serialized,
                 'condition_b':self.condition_b.serialized,
-                'operation':self.operation.serialized
+                'operator':self.operator.serialized
                 }
 
     def evaluate(self,state):

@@ -5,7 +5,7 @@ import pprint
 
 class WiscBase(ABC):
 
-    keys = [set()] # Empty Set
+    keys = [{}] # Empty Set
 
     @property
     @abstractmethod
@@ -44,8 +44,8 @@ class WiscBase(ABC):
     @classmethod
     def parse(classes, serialized: dict, context: list):
         if isinstance(serialized,list):
-            return [WiscBase.parse(classes,content,context) for conent in serialized]
-        elif isinstance(serialized,int) or isinstance(serialized,float) or isinstance(serialized,str) or serialized == None:
+            return [WiscBase.parse(classes,content,context) for content in serialized]
+        elif isinstance(serialized,(int,float)) or serialized == None:
             return serialized
         elif isinstance(serialized,dict):
             for cls in classes:

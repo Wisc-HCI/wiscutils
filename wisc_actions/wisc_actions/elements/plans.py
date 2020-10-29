@@ -84,7 +84,7 @@ class PlanningProgram(Program):
     Program focused on PDDL-like planning representations
     '''
 
-    keys = [set(('name','actions','initial','goal','rules'))]
+    keys = [{'name','actions','initial','goal','rules'}]
 
     def __init__(self,name:str='My Planning Program',actions:List[Primitive]=[],initial=[],goal=[],rules:List[Condition]=[],_id:str=None):
         super(PlanningProgram,self).__init__(name,actions,initial,_id)
@@ -129,7 +129,7 @@ class ImperativeProgram(Program):
     Program focused on imperative, sequential representations
     '''
 
-    keys = [set(('name','actions','initial','main','rules'))]
+    keys = [{'name','actions','initial','main','rules'}]
 
     def __init__(self,name='My Imperative Program',actions=[],initial=[],main=None,rules=[],_id=None):
         super(ImperativeProgram,self).__init__(name,actions,initial,_id)
@@ -177,7 +177,7 @@ class AutomataProgram(Program):
     Program focused on state-action representations
     '''
 
-    keys = [set(('name','actions','states','transitions','initial','end_states','rules'))]
+    keys = [{'name','actions','states','transitions','initial','end_states','rules'}]
 
     def __init__(self,name='My Automata Program',actions=[],states=[],transitions=[],initial=None,end_states=[],rules=[],_id=None):
         super(AutomataProgram,self).__init__(name,actions,initial=[],_id=_id)
@@ -211,7 +211,7 @@ class ExecutableProgram(Program):
     Can be partial or full programs.
     '''
 
-    keys = [set(('name','actions'))]
+    keys = [{'name','actions'}]
 
     def __init__(name='My Executable Program',actions=[],_id=None):
         super(ExecutableProgram,self).__init__(name,actions,initial=[],_id=_id)

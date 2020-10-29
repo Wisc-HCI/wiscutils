@@ -2,7 +2,7 @@ from bson.objectid import ObjectId
 from .base import WiscBase
 from .calls import Call
 from .flow import Branch, Loop
-from .definitions import Definition, LiteralDefinition, PropertyDefinition, IndexDefinition, DescriptionDefinition
+from .assignments import Assign
 from .conditions import Condition, PropertyCondition, UnaryLTLCondition, BinaryLTLCondition
 from typing import List
 
@@ -12,7 +12,7 @@ class Primitive(WiscBase):
     Encoding for Primitive Actions. All higher-level management is handled by enclosing actions.
     '''
 
-    keys = [set(['_id', 'name', 'parameters'])]
+    keys = [{'_id', 'name', 'parameters'}]
 
     def __init__(self, name: str, parameters: List[str], _id: str = None):
         self.id = ObjectId(_id)
@@ -40,13 +40,12 @@ class Action(Primitive):
     conditions can be specified through the keyword arguments.
     '''
 
-    keys = [set(['_id', 'name', 'parameters', 'subactions',
-                 'preconditions', 'postconditions'])]
+    keys = [{'_id', 'name', 'parameters', 'subactions','preconditions', 'postconditions'}]
 
-    def __init__(self, name: str, parameters: List[str], subactions: List[Call], definitions: List[Definition], preconditions: List[Condition], postconditions: List[Condition], _id: str = None):
+    def __init__(self, name: str, parameters: List[str], subactions: List[Call], assignments: List[Assign], preconditions: List[Condition], postconditions: List[Condition], _id: str = None):
         super(Action, self).__init__(name, parameters, _id=_id)
         self.subactions = subactions
-        self.definitions = definitions
+        self.assignments = assignments
         self.additional_preconditions = preconditions
         self.additional_postconditions = postconditions
 
@@ -56,14 +55,13 @@ class Action(Primitive):
         name = serialized['name']
         parameters = serialized['parameters']
         subactions = []
-        definitions = []
+        assignments = []
         preconditions = []
         postconditions = []
         for serial_subaction in serialized['subactions']:
             subactions.append(WiscBase.parse([Call, Loop, Branch], serial_subaction))
-        for serial_definition in serialized['definitions']:
-            definitions.append(WiscBase.parse(
-                [LiteralDefinition, PropertyDefinition, IndexDefinition], serial_definition),context)
+        for serial_assignment in serialized['assignments']:
+            assignments.append(Assign.parse(serial_assignment,context))
         for serial_precondition in serialized['preconditions']:
             preconditions.append(
                 WiscBase.parse([Condition, UnaryLTLCondition, BinaryLTLCondition], serial_precondition))
@@ -74,7 +72,7 @@ class Action(Primitive):
                       name=name,
                       parameters=parameters,
                       subactions=subactions,
-                      definitions=definitions,
+                      assignments=assignments,
                       preconditions=preconditions,
                       postconditions=postconditions)
 
@@ -82,7 +80,7 @@ class Action(Primitive):
     def serialized(self):
         repr = super(Action, self).serialized
         repr.update({'subactions': self.serialize(self.subactions),
-                     'definitions': self.serialize(self.definitions),
+                     'assignments': self.serialize(self.assignments),
                      'preconditions': self.serialize(self.preconditions),
                      'postconditions': self.postconditions})
         return repr
@@ -139,9 +137,9 @@ class Action(Primitive):
 
         # scope: { 'grip': 3, 'force': 67 }
 
-        # add anything in definitions
-        for definition in self.definitions:
-            scope[Reference(definition.name)] = definition
+        # add anything in assignments
+        for assignment in self.assignments:
+            scope[Reference(assignment.name)] = assignment
 
         # scope: { 'grip': 3, 'force': 67, 'some_def': {fallback: 1}  }
 
@@ -167,14 +165,13 @@ class Action(Primitive):
         '''
         pass
 
-    def add_definition(self, definition: Definition):
-        self.definitions.append(definition)
+    def add_assignment(self, assignment: Assign):
+        self.assignments.append(assignment)
 
-    def create_definition(self, **kwargs) -> Definition:
-        definition = WiscBase.parse([LiteralDefinition, PropertyDefinition,
-                            IndexDefinition, DescriptionDefinition], kwargs)
-        self.add_definition(definition)
-        return definition
+    def create_assignment(self, **kwargs) -> Assign:
+        assignment = Assign(**kwargs)
+        self.add_assignment(assignment)
+        return assignment
 
     def add_precondition(self, condition: Condition):
         self.additional_preconditions.append(condition)
