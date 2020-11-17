@@ -1,6 +1,6 @@
 from .base import WiscBase
 from .actions import Action, Primitive
-from .conditions import Condition, PropertyCondition, UnaryLTLCondition, BinaryLTLCondition
+from .conditions import Condition
 from .things import Thing, Property
 from wisc_actions.errors.warnings import DuplicateActionNameWarning, MainDoesNotExistWarning
 from abc import ABC, abstractmethod
@@ -39,33 +39,9 @@ class Program(WiscBase):
                 'initial':self.serialize(self.initial)
         }
 
-    def get_action_by_id(self,id) -> Primitive:
-        # Fast way to return the first item that has that id
-        return next((a for a in self.actions if a.id == id or str(a.id) == id), None)
-
-    def get_actions_by_name(self,name:str) -> List[Primitive]:
-        # Since unique action names are not enforced, this may return more than one.
-        # If all action names are unique, will return a list of length 1.
-        return [action for action in self.actions if action.name == name]
-
     def get_thing_in_initial_state_by_id(self,id) -> Thing:
         # Fast way to return the first item that has that id
         return next((t for t in self.initial if t.id == id or str(t.id) == id), None)
-
-    def add_action(self,action:Primitive):
-        if len(self.get_actions_by_name(action.name)) > 0:
-            warnings.warn('Action name {0} already exists. This is permitted but will require searching for actions by ID',DuplicateActionNameWarning)
-        self.actions.append(action)
-
-    def create_action(self,name:str,parameters:List[str]=[]) -> Action:
-        action = Action(name,parameters,[],[],[],[])
-        self.add_action(action)
-        return action
-
-    def create_primitive(self,name:str,parameters:List[str]=[]) -> Primitive:
-        primitive = Primitive(name,parameters)
-        self.add_action(primitive)
-        return primitive
 
     def add_thing_to_initial_state(self,thing):
         self.initial.append(thing)
@@ -107,7 +83,7 @@ class PlanningProgram(Program):
         actions = WiscBase.parse([Action,Primitive],serialized['actions'])
         initial = [Thing.load(content,context) for content in serialized['initial']]
         goal = [Thing.load(content,context) for content in serialized['goal']]
-        rules = [WiscBase.parse([Condition,UnaryLTLCondition,BinaryLTLCondition],content,context) for content in serialized['rules']]
+        rules = [WiscBase.parse([Condition],content,context) for content in serialized['rules']]
         return PlanningProgram(name=serialized['name'],actions=actions,initial=initial,goal=goal,rules=rules,_id=id)
 
     @property
@@ -142,7 +118,7 @@ class ImperativeProgram(Program):
         actions = WiscBase.parse([Action,Primitive],serialized['actions'],context)
         initial = [Thing.load(content) for content in serialized['initial']]
         main = serialized['main']
-        rules = [WiscBase.parse([Condition,UnaryLTLCondition,BinaryLTLCondition],content,context) for content in serialized['rules']]
+        rules = [WiscBase.parse([Condition],content,context) for content in serialized['rules']]
         return ImperativeProgram(name=serialized['name'],actions=actions,initial=initial,main=main,_id=id)
 
     @property
@@ -197,7 +173,7 @@ class AutomataProgram(Program):
         transitions = serialized['transitions']
         initial_state = serialized['initial_state']
         end_states = serialized['end_states']
-        rules = [WiscBase.parse([Condition,UnaryLTLCondition,BinaryLTLCondition],content,context) for content in serialized['rules']]
+        rules = [WiscBase.parse([Condition],content,context) for content in serialized['rules']]
         return AutomataProgram(name,actions,states,transitions,initial_state,end_states,rules,id)
 
     @classmethod

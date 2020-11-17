@@ -30,6 +30,7 @@ class Operator(Enum):
     ACCESS = 'access'
     UNION = 'U'          # SETS
     INTERSECTION = 'I'   # SETS
+    HAS_PROPERTY = 'has_property'
 
     @classmethod
     def load(cls,serialized):
@@ -73,14 +74,14 @@ def observe(description,context):
     for item in context.state:
         found = False
         for property in item.properties:
-            if EXECUTION[description.operator](property,description.property,context):
+            if EVALUATION[description.operator](property,description.property,context):
                 found = True
         if found:
             observable.append(item)
     return observable
 
 
-EXECUTION = {
+EVALUATION = {
     Operator.ADD:lambda term_a, term_b, context: Operation.resolve(term_a,context) + Operation.resolve(term_b,context),
     Operator.SUBTRACT:lambda term_a, term_b, context: Operation.resolve(term_a,context) - Operation.resolve(term_b,context),
     Operator.MULTIPLY:lambda term_a, term_b, context: Operation.resolve(term_a,context) * Operation.resolve(term_b,context),
@@ -100,6 +101,7 @@ EXECUTION = {
     Operator.OBSERVE:lambda term_a, term_b, context: observe(term_a,context),
     Operator.UNION:lambda term_a, term_b, context: [term for term in Operation.resolve(term_a,context) if term not in Operation.resolve(term_b,context)]+[term for term in Operation.resolve(term_b,context)],
     Operator.INTERSECTION:lambda term_a, term_b, context: [term for term in Operation.resolve(term_a,context) if term in Operation.resolve(term_b,context)],
+    Operator.HAS_PROPERTY:lambda term_a, term_b, context: Operation.resolve(term_a,context).has_property(Operation.resolve(term_b,context))
 }
 
 class Operation(WiscBase):
@@ -131,13 +133,13 @@ class Operation(WiscBase):
 
     @property
     def serialized(self):
-        return {'term_a':self.term_a.serialized,
-                'term_b':self.term_b.serialized if self.binary else None,
+        return {'term_a':self.serialize(self.term_a),
+                'term_b':self.serialize(self.term_b) if self.binary else None,
                 'operator':self.operator.serialized
                 }
 
     def execute(self,context):
-        return EXECUTION[self.operator](self.term_a, self.term_b, context)
+        return EVALUATION[self.operator](self.term_a, self.term_b, context)
 
     @classmethod
     def resolve(self,term,context):
@@ -210,3 +212,6 @@ class Operation(WiscBase):
             return Operation(self,other,Operator.EQUALS)
         else:
             return None
+
+    def access(self,name:'Term') -> 'Operation':
+        return Operation(self,name,Operator.ACCESS)

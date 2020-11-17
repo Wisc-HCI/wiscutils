@@ -1,5 +1,5 @@
 from .base import WiscBase
-from .things import Thing, Property
+from .things import Term, Thing, Property
 from .structures import Position, Orientation, Pose
 from .operations import *
 
@@ -23,19 +23,43 @@ class Assign(WiscBase):
     @classmethod
     def load(cls, serialized: dict, context: list):
         return Assign(term=Term(serialized['term']),
-                      operation=WiscBase.parse([Operation,Observe,Term],serialized['operation'],context),
-                      fallback=WiscBase.parse([Operation,Observe,Term],serialized['fallback'],context))
+                      operation=WiscBase.parse([Operation,Term],serialized['operation'],context),
+                      fallback=WiscBase.parse([Operation,Term],serialized['fallback'],context))
 
-    def evaluate(self,context):
+    def execute(self,context):
+        item = context.get(self.term)
+        if isinstance(self.operation,Term):
+            result = context.get(self.operation)
+        else:
+            result = self.operation.execute(context)
+        if result == None:
+            if isinstance(self.fallback,Term):
+                result = context.get(self.fallback)
+            else:
+                result = self.fallback.execute(context)
+
+        if isinstance(item,Thing) and isinstance(result,Property):
+            item.add_property(result)
+        else:
+            context.set(self.term,result)
+
+    def check(self,context):
         item = context.get(self.term)
         result = self.operation.execute(context)
         if result == None:
             result = self.fallback.execute(context)
 
         if isinstance(item,Thing) and isinstance(result,Property):
-            item.add_property(result)
+            # Return whether the item has the property
+            if item.has_property(result.name):
+                return item.get_property(result.name) == result
+            else:
+                return False
         else:
-            context.set(self.term,result)
+            # Return whether the two sides are the same
+            return item == result
+
+
 
 # class Definition(WiscBase):
 #     '''

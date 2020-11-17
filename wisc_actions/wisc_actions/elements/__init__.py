@@ -1,18 +1,19 @@
-__all__ = ['Primitive','Action',
+__all__ = ['Primitive','Action','KnowledgeBase',
            'PlanningProgram','ImperativeProgram','AutomataProgram','ExecutableProgram',
-           'Property','Description','PropertyCondition','UnaryLTLCondition','BinaryLTLCondition',
-           'Call','Prototype','Thing','Branch','Loop','Term','Context',
-           'Operation','Operator','Assign',
-           'Position','Orientation','Pose','PoseTrajectory','ModeTrajectory']
+           'Property','Description','Condition',
+           'Call','Prototype','Thing','ForThingObserved','While','ExecuteOnConditionUntil','Branch','Term','Context',
+           'Operation','Operator','Assign','Print',
+           'Position','Orientation','Pose','JointStates','PoseSet','PoseTrajectory','ModeTrajectory']
 
 from .base import WiscBase
-from .actions import Primitive, Action
+from .actions import Primitive, Action, Print
 from .plans import PlanningProgram, ImperativeProgram, AutomataProgram, ExecutableProgram
-from .conditions import Description, PropertyCondition, UnaryLTLCondition, BinaryLTLCondition
+from .conditions import Description, Condition
 from .operations import Operation, Operator
 from .calls import Call
 from .things import Thing, Prototype, Property, Term
-from .flow import Branch, Loop
+from .flow import ForThingObserved, While, ExecuteOnConditionUntil, Branch
 from .assignments import Assign
-from .structures import Position, Orientation, Pose, PoseTrajectory, ModeTrajectory
+from .structures import Position, Orientation, Pose, JointStates, PoseSet, PoseTrajectory, ModeTrajectory
 from .context import Context
+from .knowledge import KnowledgeBase

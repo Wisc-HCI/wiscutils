@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<package>
+  <name>wisc_meshes</name>
+  <version>1.0.0</version>
+  <description>This package contains a collection of useful meshes for working with UW HCI materials
+  </description>
+  <maintainer email="andrew.schoen@wisc.edu">Andrew Schoen</maintainer>
+  <author email="andrew.schoen@wisc.edu">Andrew Schoen</author>
+  <license>Creative Commons Attribution 4.0 International License</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

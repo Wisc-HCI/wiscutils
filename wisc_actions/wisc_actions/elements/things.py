@@ -3,7 +3,7 @@ from .base import WiscBase
 from .structures import Position, Orientation, Pose
 from .operations import Operator, Operation
 from typing import Any, List, Dict
-
+import z3
 
 class Term(WiscBase):
     '''
@@ -87,8 +87,14 @@ class Term(WiscBase):
         else:
             return None
 
+    def __hash__(self):
+        return hash(self.name)
+
     def execute(self,plan,context):
         return context.get(self.name)
+
+    def access(self,name:'Term') -> Operation:
+        return Operation(self,name,Operator.ACCESS)
 
 class Property(WiscBase):
     '''
@@ -112,7 +118,10 @@ class Property(WiscBase):
         return Property(name=serialized['name'],value=value)
 
     def __eq__(self, other):
-        return self.name == other.name and self.value == other.value
+        if isinstance(other,Property):
+            return self.name == other.name and self.value == other.value
+        else:
+            return False
 
 class Prototype(WiscBase):
     '''
@@ -209,6 +218,38 @@ class Prototype(WiscBase):
     def create_prototype(self,name) -> 'Prototype':
         prototype = Prototype(name,[self],[])
         return prototype
+
+    @property
+    def z3(self):
+        vars = []
+        for property in self.properties:
+            prop_name = self.name+'_'+property.name
+            if isinstance(property.value,int):
+                prop = z3.Int(prop_name)
+                vars.append(prop==property.value)
+            elif isinstance(property.value,float):
+                prop = z3.Float64(prop_name)
+                vars.append(prop==property.value)
+            elif isinstance(property.value,float):
+                prop = z3.Bool(prop_name)
+                vars.append(prop==property.value)
+            elif isinstance(property.value,str):
+                prop = z3.String(prop_name)
+                vars.append(prop==property.value)
+            elif isinstance(property.value,[Position,Orientation]):
+                for key,value in property.value.serialized.items():
+                    attr_prop_name = prop_name+'_'+key
+                    prop = z3.Float64(attr_prop_name)
+                    vars.append(prop==value)
+            elif isinstance(property.value,Pose):
+                items = property.value.serialized.items()
+                for field in ['position','orientation']:
+                    for key,value in items[field]:
+                        attr_prop_name = prop_name+'_'+field+'_'+key
+                        prop = z3.Float64(attr_prop_name)
+                        vars.append(prop==value)
+        return vars
+
 
 class Thing(Prototype):
     '''

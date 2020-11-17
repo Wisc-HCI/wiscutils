@@ -2,6 +2,8 @@ from .base import WiscBase
 from .things import Term,Thing
 from .structures import Position, Orientation, Pose
 from typing import Any, List, Dict
+import z3
+from fuzzywuzzy import fuzz
 
 class Context(WiscBase):
     '''
@@ -16,10 +18,10 @@ class Context(WiscBase):
         self.scopes.append(scope)
 
     def pop(self):
-        if len(scopes) > 1:
+        if len(self.scopes) > 1:
             self.scopes.pop()
 
-    def add_to_state(self,reference:Term,thing:Thing):
+    def add_to_state(self,thing:Thing,reference:Term=None):
         found = False
         for idx,state_thing in enumerate(self.state):
             if thing.id == state_thing.id:
@@ -27,7 +29,18 @@ class Context(WiscBase):
                 found = True
         if not found:
             self.state.append(thing)
-        self.scopes[len(self.scopes)-1][reference.name] = Term(str(thing.id))
+        if reference != None:
+            self.scopes[len(self.scopes)-1][reference.name] = Term(str(thing.id))
+
+    def remove_from_state(self,thing:Thing=None,reference:Term=None):
+        if thing != None:
+            self.state = [entity for entity in self.state if entity.id != thing.id]
+            self.remove_references(Term(str(thing.id)))
+        elif reference != None:
+            thing = self.get(reference,0)
+            self.state = [entity for entity in self.state if entity.id != thing.id]
+            self.remove_references(reference)
+
 
     def get(self,reference:Term,level:int=0):
         # Search in the lowermost scope for the object,
@@ -76,6 +89,14 @@ class Context(WiscBase):
                 if isinstance(value,Term) and value.name == former:
                     value.name = new
 
+    def remove_references(self,reference:Term):
+        target = self.get(reference)
+        for scope in reversed(self.scopes):
+            for key,value in scope.items():
+                if isinstance(value,Term) and self.get(value) == target:
+                    del scope[key]
+
+
     def exists(self,reference:Term,level:int=0):
         if level < len(self.scopes):
             scope = self.scopes[len(self.scopes)-level-1]
@@ -91,6 +112,24 @@ class Context(WiscBase):
             return True
 
         return False
+
+    def match_thing(self,text):
+        types = []
+        for thing in self.state:
+            best_score = 0
+            for property in thing.properties:
+                score = fuzz.ratio(text.lower(),property.name.lower())
+                if score > best_score:
+                    best_score = score
+            types.append({'thing':thing,'score':best_score})
+        return sorted(types,key=lambda item: item['score'],reverse=True)
+
+    @property
+    def z3(self):
+        constraints = []
+        for thing in self.state:
+            constraints.extend(thing.z3)
+        return constraints
 
     def __repr__(self):
         return str(self.scopes)

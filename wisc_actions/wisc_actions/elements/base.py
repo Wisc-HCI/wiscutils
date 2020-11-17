@@ -42,7 +42,7 @@ class WiscBase(ABC):
         return None
 
     @classmethod
-    def parse(classes, serialized: dict, context: list):
+    def parse(classes:list, serialized: dict, context: list):
         if isinstance(serialized,list):
             return [WiscBase.parse(classes,content,context) for content in serialized]
         elif isinstance(serialized,(int,float)) or serialized == None:

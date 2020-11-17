@@ -1,4 +1,6 @@
 from .base import WiscBase
+from .things import Term
+from typing import Dict
 
 class Call(WiscBase):
     '''
@@ -7,7 +9,7 @@ class Call(WiscBase):
 
     keys = [{'id','parameters'}]
 
-    def __init__(self,id,parameters:dict):
+    def __init__(self,id,parameters:Dict[Term,Term]):
         self.id = id
         self.parameters = parameters
 
@@ -17,4 +19,4 @@ class Call(WiscBase):
 
     @classmethod
     def load(cls, serialized: dict, context: list):
-        return Call(id=serialized['id'],parameters=serialized['parameters'])
+        return Call(id=serialized['id'],parameters=[{Term(key):Term(key)} for key,value in serialized['parameters'].items()])

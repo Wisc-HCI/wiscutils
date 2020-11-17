@@ -11,6 +11,7 @@ try:
     from geometry_msgs.msg import Point as rosPoint
     from geometry_msgs.msg import Quaternion as rosQuaternion
     from geometry_msgs.msg import Pose as rosPose
+    from sensor_msgs.msg import JointState as rosJointState
     HAS_ROS = True
 except:
     warnings.warn('ROS is not loaded. Exporting to ROS messages is not supported.',Warning)
@@ -18,7 +19,13 @@ except:
 from abc import abstractmethod
 from .base import WiscBase
 
-class Position(WiscBase):
+class Structure(WiscBase):
+
+    @property
+    def serialized(self):
+        return self.dict
+
+class Position(Structure):
 
     keys = [{'x','y','z'}]
 
@@ -67,7 +74,7 @@ class Position(WiscBase):
     def __repr__(self):
         return '[x:{0},y:{1},z:{2}]'.format(self.x,self.y,self.z)
 
-class Orientation(pyQuaternion,WiscBase):
+class Orientation(pyQuaternion,Structure):
 
     keys = [{'r','p','y'},{'w','x','y','z'}]
 
@@ -87,10 +94,6 @@ class Orientation(pyQuaternion,WiscBase):
         assert HAS_ROS, 'This method requires ROS'
         (r,p,y) = transformations.euler_from_quaternion([self.w,self.x,self.y,self.z],'szxy')
         return {'r':r,'p':p,'y':y}
-
-    @property
-    def serialized(self):
-        return self.dict
 
     @classmethod
     def from_vector_quaternion(self,vector):
@@ -131,7 +134,7 @@ class Orientation(pyQuaternion,WiscBase):
     def distance_to(self,other):
         return pyQuaternion.distance(self,other)
 
-class Pose(WiscBase):
+class Pose(Structure):
 
     keys = [{'position','orientation'}]
 
@@ -181,15 +184,80 @@ class Pose(WiscBase):
     def __repr__(self):
         return '({0}, {1})'.format(self.position,self.orientation)
 
-    @property
-    def serialized(self):
-        return self.dict
-
     @classmethod
     def load(cls,data,context=[]):
         return Pose(Position.load(data['position']),Orientation.load(data['orientation']))
 
-class Enumerable(WiscBase):
+class JointStates(Structure):
+
+    keys = [{'joint_names','joint_values'}]
+
+    def __init__(self,joint_names,joint_values):
+        self.joint_names = joint_names
+        self.joint_lookup = {}
+        for i,name in enumerate(joint_names):
+            self.joint_lookup[name] = joint_values[i]
+
+    @property
+    def dict(self):
+        result = {'joint_names':[],'joint_values':[]}
+        for name,value in self.joint_lookup.items():
+            result['joint_names'].append(name)
+            result['joint_values'].append(value)
+        return result
+
+    @classmethod
+    def load(cls,data,context=[]):
+        return JointStates(joint_names=data['joint_names'],
+                           joint_values=data['joint_values'])
+
+    @property
+    def ros_joint_state(self):
+        serialized = self.dict
+        return rosJointState(name=serialized['joint_names'],position=serialized['joint_values'])
+
+    def __getattr__(self,attr):
+        try:
+            super(JointStates,self).__getattr__(attr)
+        except:
+            if isinstance(attr,int):
+                return self.joint_lookup[self.joint_names[attr]]
+            else:
+                return self.joint_lookup[attr]
+
+class PoseSet(Structure):
+
+    keys = [{'pose_names','pose_values'}]
+
+    def __init__(self,pose_names,pose_values):
+        self.pose_names = pose_names
+        self.pose_lookup = {}
+        for i,name in enumerate(pose_names):
+            self.pose_lookup[name] = pose_values[i]
+
+    @property
+    def dict(self):
+        result = {'pose_names':[],'pose_values':[]}
+        for name,value in self.pose_lookup.items():
+            result['pose_names'].append(name)
+            result['pose_values'].append(value)
+        return result
+
+    @classmethod
+    def load(cls,data,context=[]):
+        return PoseSet(pose_names=data['pose_names'],
+                       pose_values=data['pose_values'])
+
+    def __getattr__(self,attr):
+        try:
+            super(PoseSet,self).__getattr__(attr)
+        except:
+            if isinstance(attr,int):
+                return self.pose_lookup[self.pose_names[attr]]
+            else:
+                return self.pose_lookup[attr]
+
+class Enumerable(Structure):
 
     keys = [{'items'}]
 

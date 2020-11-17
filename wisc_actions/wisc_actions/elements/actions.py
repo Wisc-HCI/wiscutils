@@ -1,11 +1,34 @@
 from bson.objectid import ObjectId
 from .base import WiscBase
 from .calls import Call
-from .flow import Branch, Loop
+from .flow import Flow, While, ForThingObserved, ExecuteOnConditionUntil
 from .assignments import Assign
-from .conditions import Condition, PropertyCondition, UnaryLTLCondition, BinaryLTLCondition
-from typing import List
+from .things import Term
+from .conditions import Condition
+from typing import List, Union
+from copy import deepcopy
 
+class Print(WiscBase):
+    '''
+    Utility Class for Printing terms.
+    '''
+    keys = [{'term'}]
+
+    def __init__(self,term:Term):
+        self.term = term
+
+    @property
+    def serialized(self):
+        return {'term':self.serialize(self.term)}
+
+    @classmethod
+    def load(cls, serialized:dict, context:list):
+        return Print(Term.load(serialized['term'],context))
+
+    def execute(self, context):
+        # Get term referent
+        referent = context.get(self.term)
+        print(str(referent))
 
 class Primitive(WiscBase):
     '''
@@ -14,7 +37,7 @@ class Primitive(WiscBase):
 
     keys = [{'_id', 'name', 'parameters'}]
 
-    def __init__(self, name: str, parameters: List[str], _id: str = None):
+    def __init__(self, name: str, parameters: List[Term], _id: str = None):
         self.id = ObjectId(_id)
         self.name = name
         self.parameters = parameters
@@ -29,8 +52,34 @@ class Primitive(WiscBase):
     def load(cls, serialized: dict, context: list):
         return Primitive(**serialized)
 
-    def create_call(self, parameters: dict) -> Call:
+    def call(self, parameters: dict) -> Call:
         return Call(id=self.id, parameters=parameters)
+
+    def execute(self, kb, context, simulate=False):
+        pass
+
+    def resolve(self, kb, context):
+        return {'_id': str(self.id),
+                'name': self.name,
+                'parameters': {self.serialize(term):context.get(term) for term in self.parameters}
+        }
+
+    def setup(self,kb,context,parameters):
+        new_scope = {}
+        for parameter,reference in parameters.items():
+            new_scope[parameter.name] = reference
+        context.add(new_scope)
+
+    def takedown(self,kb,context,parameters):
+        context.pop()
+
+    def simulate(self,kb,context,parameters):
+        context = deepcopy(context)
+        parameters = deepcopy(parameters)
+        self.setup(kb,context,parameters)
+        self.execute(kb,context)
+        self.takedown(kb,context,parameters)
+        return context
 
 
 class Action(Primitive):
@@ -42,10 +91,9 @@ class Action(Primitive):
 
     keys = [{'_id', 'name', 'parameters', 'subactions','preconditions', 'postconditions'}]
 
-    def __init__(self, name: str, parameters: List[str], subactions: List[Call], assignments: List[Assign], preconditions: List[Condition], postconditions: List[Condition], _id: str = None):
+    def __init__(self, name: str, parameters: List[Term], subactions: List[Union[Call,Flow,Assign]], preconditions: List[Condition], postconditions: List[Condition], _id: str = None):
         super(Action, self).__init__(name, parameters, _id=_id)
         self.subactions = subactions
-        self.assignments = assignments
         self.additional_preconditions = preconditions
         self.additional_postconditions = postconditions
 
@@ -59,15 +107,13 @@ class Action(Primitive):
         preconditions = []
         postconditions = []
         for serial_subaction in serialized['subactions']:
-            subactions.append(WiscBase.parse([Call, Loop, Branch], serial_subaction))
-        for serial_assignment in serialized['assignments']:
-            assignments.append(Assign.parse(serial_assignment,context))
+            subactions.append(WiscBase.parse([Call, While, ForThingObserved, ExecuteOnConditionUntil], serial_subaction))
         for serial_precondition in serialized['preconditions']:
             preconditions.append(
-                WiscBase.parse([Condition, UnaryLTLCondition, BinaryLTLCondition], serial_precondition))
+                WiscBase.parse([Condition], serial_precondition,context))
         for serial_postcondition in serialized['postconditions']:
             postconditions.append(
-                WiscBase.parse([Condition, UnaryLTLCondition, BinaryLTLCondition], serial_postcondition))
+                WiscBase.parse([Condition], serial_postcondition,context))
         return Action(_id=id,
                       name=name,
                       parameters=parameters,
@@ -120,50 +166,65 @@ class Action(Primitive):
         '''
         return self.inferred_postconditions + self.additional_postconditions
 
-    def update_context(self,context,parameters:dict):
-        '''
-        Update all items in the context of the action for its execution.
-        '''
-        # add a new scope
-        scope = {} # (ref, obj) pairs
-
-        # add all parameters
-
-        assert set(parameters.keys()) == set(self.parameters)
-
-        # argument_parameters = { 'grip': 3, 'force': 67 }
-        for key, value in parameters.items():
-            scope[Reference(key)] = value
-
-        # scope: { 'grip': 3, 'force': 67 }
-
-        # add anything in assignments
-        for assignment in self.assignments:
-            scope[Reference(assignment.name)] = assignment
-
-        # scope: { 'grip': 3, 'force': 67, 'some_def': {fallback: 1}  }
-
-        # exit
-        context.add(scope=scope)
-
-    def resolve(self,context,parameters):
+    def resolve(self,kb,context):
         '''
         Calling "resolve" has the effect of resolving the executable
         to a a static set of parameterized primitives.
         '''
-        pass
+        resolved = []
 
-    def simulate(self,context,parameters):
-        '''
-        Calling "simulate" has the effect of executing the resolved action
-        '''
-        pass
+        for executable in self.subactions:
+            if isinstance(executable,Call):
+                subaction = kb.get_action_by_id(executable.id)
+                subaction.setup(kb,context,executable.parameters)
+                res = subaction.execute(kb,context)
+                if isinstance(res,list):
+                    resolved.extend(res)
+                else:
+                    resolved.append(res)
+            elif isinstance(executable,Flow):
+                res = executable.resolve(kb,context)
+                resolved.extend(res)
+            else:
+                executable.execute(kb,context)
+            if isinstance(executable,Call):
+                subaction.takedown(kb,context,executable.parameters)
 
-    def check(self,context,parameters):
+        return resolved
+
+    def takedown(self,kb,context,parameters):
+        for postcondition in self.additional_postconditions:
+            postcondition.execute(context)
+        context.pop()
+
+    def execute(self, kb, context):
         '''
-        Check whether the action can be executed given the current context
+        Calling "execute" has the effect of executing the action
         '''
-        pass
+        # A new scope should have been defined outside this action.
+        # Execute each of the sub-actions
+        for executable in self.subactions:
+            if isinstance(executable,Call):
+                subaction = kb.get_action_by_id(executable.id)
+                subaction.setup(kb,context,executable.parameters)
+                subaction.execute(kb,context)
+            elif isinstance(executable,Flow):
+                executable.execute(kb,context)
+            else:
+                executable.execute(context)
+            if isinstance(executable,Call):
+                subaction.takedown(kb,context,executable.parameters)
+
+    def check(self,kb,context,parameters):
+        '''
+        Check whether the action can be executed given the current context and parameters
+        '''
+        # TODO: Set up scope and add parameters
+        passed = True
+        for precondition in self.preconditions:
+            if not precondition.check(kb,context):
+                passed = False
+        return passed
 
     def add_assignment(self, assignment: Assign):
         self.assignments.append(assignment)
@@ -173,20 +234,18 @@ class Action(Primitive):
         self.add_assignment(assignment)
         return assignment
 
-    def add_precondition(self, condition: Condition):
+    def add_precondition(self, condition: Assign):
         self.additional_preconditions.append(condition)
 
-    def create_precondition(self, **kwargs):
-        precondition = WiscBase.parse(
-            [PropertyCondition, UnaryLTLCondition, BinaryLTLCondition], kwargs)
+    def create_precondition(self, **kwargs) -> Assign:
+        precondition = WiscBase.parse([Assign], kwargs)
         self.add_precondition(precondition)
         return precondition
 
-    def add_postcondition(self, condition: Condition):
+    def add_postcondition(self, condition: Assign):
         self.additional_postconditions.append(condition)
 
-    def create_postcondition(self, **kwargs):
-        postcondition = WiscBase.parse(
-            [PropertyCondition, UnaryLTLCondition, BinaryLTLCondition], kwargs)
+    def create_postcondition(self, **kwargs) -> Assign:
+        postcondition = WiscBase.parse([Assign], kwargs)
         self.add_postcondition(postcondition)
         return postcondition
